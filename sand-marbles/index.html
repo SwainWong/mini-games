@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3efe7">
+  <title>沙里有珠 · 挖沙小游戏</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='27' fill='%23b86b3e'/%3E%3Ccircle cx='23' cy='22' r='9' fill='%23ffe4b7'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="masthead">
+      <a class="brand" href="../" aria-label="返回 Mini Games 主页"><span class="brand-mark"><i></i><i></i><i></i></span>沙里有珠<span class="brand-en">← MINI GAMES</span></a>
+      <button class="icon-button" id="sound" aria-label="开启音效" title="开启音效"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path id="sound-waves" d="m16 9 5 6m0-6-5 6"/></svg></button>
+    </header>
+
+    <main>
+      <section class="intro"><span class="eyebrow">挖一点沙，放松一下。</span><h1>让每颗珠子，<br class="mobile-break">找到自己的归宿。</h1><p>划开沙土，让珠子落入同色的罐子里。</p></section>
+      <section class="game-shell" aria-label="挖沙游戏">
+        <div class="game-toolbar">
+          <div class="level-info"><span class="level-kicker">LEVEL <b id="level-number">01</b> / 03</span><h2 id="level-title">初识沙径</h2></div>
+          <nav class="level-nav" aria-label="选择关卡"><button data-level="0" class="active" aria-label="第 1 关" aria-current="step">01</button><span></span><button data-level="1" aria-label="第 2 关">02</button><span></span><button data-level="2" aria-label="第 3 关">03</button></nav>
+        </div>
+        <div class="board-wrap" id="board-wrap">
+          <canvas id="game" width="560" height="680" aria-label="按住鼠标或手指划开沙土，让珠子落入同色罐子。可点击下方提示查看路线。">你的浏览器需要支持 Canvas 才能玩这个游戏。</canvas>
+          <div class="board-caption"><span><i></i> <span id="board-instruction">按住并划动，挖出一条路</span></span><span id="collected">0 / 22</span></div>
+          <div class="result-overlay" id="result" hidden>
+            <div class="result-card"><div class="result-symbol" id="result-symbol">✦</div><span class="eyebrow" id="result-kicker">BEAUTIFULLY DONE</span><h2 id="result-title">每颗珠子，都到家了。</h2><p id="result-description">慢慢来，也能刚刚好。</p><button class="primary-button" id="result-action">下一关 <span>→</span></button><button class="text-button" id="result-replay">再玩一次</button></div>
+          </div>
+        </div>
+        <div class="game-bottom"><p id="status" role="status" aria-live="polite"><span class="status-dot"></span>不用着急，先想好珠子的路线。</p><div class="game-actions"><button id="hint"><svg viewBox="0 0 24 24"><path d="M9 18h6m-5 3h4M8.5 14.5a6 6 0 1 1 7 0c-1 .7-1 1.5-1 2.5h-5c0-1 0-1.8-1-2.5Z"/></svg>提示</button><button id="restart"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg>重来</button></div></div>
+      </section>
+      <footer class="page-footer"><span><svg viewBox="0 0 20 20"><path d="m4 11 3 3 9-9M3 5v3m-1-1h3"/></svg>手指或鼠标划动 · 同色入罐</span><span>三段沙径，一点小小的成就感。</span></footer>
+    </main>
+    <div class="edge-note">A LITTLE PAUSE, A LITTLE PLAY.</div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
