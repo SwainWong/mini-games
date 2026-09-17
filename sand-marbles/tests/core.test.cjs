@@ -16,8 +16,3 @@ test('stone cannot be dug or charged to the player',()=>{
   assert.equal(typeof core.Terrain,'function');const t=new core.Terrain([{x:100,y:150,rx:30,ry:30}]);
   assert.equal(t.dig(100,150,15,'player'),0);assert.equal(t.playerCells,0);assert.ok(t.solid(100,150));
 });
-test('refill excludes active balls and never directly charges the player',()=>{
-  assert.equal(typeof core.Terrain,'function');const t=new core.Terrain([]);t.dig(150,200,25,'worm');
-  t.refill({x:130,y:180,w:40,h:40},[{x:150,y:200,r:10,active:true}]);assert.equal(t.solid(150,200),false);assert.equal(t.playerCells,0);
-  assert.ok(t.solid(132,182));
-});

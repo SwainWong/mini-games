@@ -3,12 +3,11 @@
   const {W,H,BOTTOM:SOIL_BOTTOM,GW,CELL,STEP,World}=SandCore,levels=SandLevels;
   const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),$=s=>document.querySelector(s);
   const colors={amber:{light:'#fff2d8',mid:'#e89a50',base:'#a7481f',dark:'#54200f',label:'琥珀'},blue:{light:'#effaff',mid:'#a3c8dc',base:'#557d99',dark:'#243b54',label:'冰蓝'},jade:{light:'#f1ffe2',mid:'#b1c68b',base:'#64875c',dark:'#344b33',label:'青玉'},rose:{light:'#fff0f2',mid:'#e1a1b1',base:'#ab597d',dark:'#612e4b',label:'玫瑰'}};
-  const features={worm:['〰','蚯蚓'],quake:['≈','地震 × 2'],wind:['↝','风口'],mud:['▨','黏土'],gate:['▥','定时闸门'],magnet:['∩','磁石']};
+  const features={worm:['〰','蚯蚓'],porter:['♟','搬罐小哥']};
   const typeLabels={glass:'● 玻璃珠',heavy:'⊕ 重力珠',rubber:'◎ 弹力珠',light:'✧ 轻盈珠'};
   const soil=document.createElement('canvas'),texture=document.createElement('canvas'),earth=document.createElement('canvas');soil.width=texture.width=earth.width=W;soil.height=texture.height=SOIL_BOTTOM;earth.height=H;
   const sc=soil.getContext('2d'),tc=texture.getContext('2d'),ec=earth.getContext('2d'),sound=new SandAudio(),best=new Map();
-  let world,current=0,brush=24,hint=false,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],seed=42,lastHud='',finished=false,lastGateStates=[],quakeStatusUntil=0;
-  const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let world,current=0,brush=24,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],seed=42,lastHud='',finished=false;
   function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
   function roundRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
   function status(text){$('#status').textContent=text;}
@@ -27,18 +26,16 @@
     }
   }
   function load(index){
-    releasePointer();current=index;world=new World(levels[index]);hint=false;finished=false;cursor=null;particles=[];accumulator=0;lastHud='';quakeStatusUntil=0;lastGateStates=[];
+    releasePointer();current=index;world=new World(levels[index]);finished=false;cursor=null;particles=[];accumulator=0;lastHud='';
     makeTextures();$('#level-number').textContent=String(index+1).padStart(2,'0');$('#level-title').textContent=levels[index].title;$('#difficulty').textContent=levels[index].difficulty;
-    $('#result').hidden=true;$('#result-stars').hidden=true;$('#hint').setAttribute('aria-pressed','false');$('#rules-budget').textContent=`本关：三星 ≤ ${world.budget.three} 沙量；二星 ≤ ${world.budget.two} 沙量。`;
+    $('#result').hidden=true;$('#result-stars').hidden=true;$('#rules-budget').textContent=`本关：三星 ≤ ${world.budget.three} 沙量；二星 ≤ ${world.budget.two} 沙量。`;
     $('#features').replaceChildren();const types=[...new Set(levels[index].groups.flatMap(g=>g.types||['glass']))];
     for(const text of [...types.map(t=>typeLabels[t]),...levels[index].features.map(f=>features[f].join(' '))]){const s=document.createElement('span');s.textContent=text;$('#features').append(s);}
     updateLevelGrid();status(levels[index].note);updateHud();render();
   }
   function updateHud(){
     const key=`${world.collected}:${world.terrain.units}`;if(key!==lastHud){lastHud=key;$('#collected').textContent=`${world.collected} / ${world.total}`;$('#dug-count').textContent=world.terrain.units;$('#star-budget').textContent=`三星 ≤ ${world.budget.three} · 二星 ≤ ${world.budget.two}`;const meter=$('#sand-meter');meter.max=world.budget.two;meter.low=world.budget.three;meter.high=world.budget.two;meter.optimum=0;meter.value=Math.min(world.terrain.units,world.budget.two);meter.setAttribute('aria-valuetext',`已挖 ${world.terrain.units}，三星额度 ${world.budget.three}，二星额度 ${world.budget.two}`);}
-    const q=levels[current].mechanics.quake;let text=world.started?'保留沙墙，送同色珠子回家':'按住划动，机关随第一铲开始';
-    if(q&&world.started&&world.quakeCount<q.count){const remaining=q.first+world.quakeCount*q.interval-world.time;text=remaining<=2?`⚠ 地震即将发生 · ${Math.max(0,remaining).toFixed(1)} 秒`:`下次地震 ${Math.ceil(remaining)} 秒 · 还剩 ${q.count-world.quakeCount} 次`;}
-    if(world.quakeLeft>0)text='≈ 地震中 · 珠子抖动，局部落沙';$('#board-instruction').textContent=text;
+    const waiting=world.jars.reduce((n,j)=>n+j.waiting.length,0);$('#board-instruction').textContent=waiting?`接珠盘暂存 ${waiting} 颗 · 等罐子回来装入`:world.started?'保留沙墙，送同色珠子回家':'按住划动，开始挖沙';
   }
   function finish(){
     if(finished)return;finished=true;releasePointer();const won=world.state==='won',last=current===levels.length-1;
@@ -64,7 +61,7 @@
     ctx.strokeStyle='#5e5d5540';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-rock.rx*.5,-rock.ry*.15);ctx.lineTo(-rock.rx*.12,-rock.ry*.38);ctx.lineTo(rock.rx*.33,-rock.ry*.05);ctx.lineTo(rock.rx*.48,rock.ry*.43);ctx.stroke();ctx.fillStyle='#ece5d129';ctx.beginPath();ctx.ellipse(-rock.rx*.23,-rock.ry*.43,rock.rx*.40,rock.ry*.13,-.3,0,Math.PI*2);ctx.fill();ctx.restore();
   }
   function jarDraw(jar){
-    const x=jar.x,y=590,w=100,h=75,p=colors[jar.color];
+    const x=jar.x,y=630-jar.lift,w=100,h=75,p=colors[jar.color];
     ctx.save();ctx.shadowColor='#190a0790';ctx.shadowBlur=7;ctx.shadowOffsetY=3;
     const glass=ctx.createLinearGradient(x-w/2,y,x+w/2,y+h);glass.addColorStop(0,'#d8d7e05c');glass.addColorStop(.25,'#bbb2bd36');glass.addColorStop(.7,'#bbb2ca4d');glass.addColorStop(1,'#e6dce778');
     roundRect(ctx,x-w/2,y,w,h,11);ctx.fillStyle=glass;ctx.fill();ctx.shadowColor='transparent';ctx.strokeStyle='#291b1ac9';ctx.lineWidth=4;ctx.stroke();ctx.strokeStyle='#ddcbd2a3';ctx.lineWidth=2;ctx.stroke();
@@ -84,27 +81,35 @@
   }
   function mechanismDraw(){
     const m=levels[current].mechanics,t=world.time;
-    for(const z of m.winds||[]){ctx.fillStyle='#d1e7ec22';ctx.fillRect(z.x,z.y,z.w,z.h);ctx.save();ctx.strokeStyle='#e9fcffc0';ctx.lineWidth=1.4;for(let i=0;i<6;i++){const x=z.x+((t*30+i*21)%z.w),y=z.y+13+i*15;ctx.beginPath();ctx.moveTo(x-8,y);ctx.lineTo(x+5,y);ctx.lineTo(x+1,y-3);ctx.moveTo(x+5,y);ctx.lineTo(x+1,y+3);ctx.stroke();}ctx.restore();}
-    for(const z of m.muds||[]){ctx.fillStyle='#73644c48';ctx.fillRect(z.x,z.y,z.w,z.h);ctx.strokeStyle='#d0b79077';ctx.lineWidth=1;for(let y=z.y+10;y<z.y+z.h;y+=13){ctx.beginPath();ctx.moveTo(z.x+6,y);ctx.bezierCurveTo(z.x+30,y-7,z.x+60,y+7,z.x+z.w-6,y);ctx.stroke();}}
-    if(m.quake){ctx.save();ctx.setLineDash([3,4]);ctx.strokeStyle=world.quakeLeft>0?'#ffdfa1':'#a97b5370';for(const p of m.quake.patches)ctx.strokeRect(p.x-2,p.y-2,p.w+4,p.h+4);ctx.restore();}
-    for(const z of m.magnets||[]){ctx.save();ctx.translate(z.x,z.y);ctx.strokeStyle='#936055';ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-7,-5);ctx.lineTo(-7,3);ctx.arc(0,3,7,Math.PI,0,true);ctx.lineTo(7,-5);ctx.stroke();ctx.strokeStyle='#f8ded0';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-7,-7);ctx.lineTo(-7,-3);ctx.moveTo(7,-7);ctx.lineTo(7,-3);ctx.stroke();ctx.strokeStyle='#ca927363';ctx.lineWidth=1;ctx.setLineDash([3,6]);ctx.beginPath();ctx.arc(0,0,20+Math.sin(t*2)*3,0,Math.PI*2);ctx.stroke();ctx.restore();}
-    for(const g of m.gates||[]){const open=world.gateOpen(g);ctx.save();ctx.strokeStyle=open?'#9bbaa2':'#c3a171';ctx.fillStyle='#564536';ctx.fillRect(g.x-4,g.y-3,7,g.h+6);ctx.fillRect(g.x+g.w-3,g.y-3,7,g.h+6);if(open){ctx.setLineDash([4,5]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(g.x,g.y+g.h/2);ctx.lineTo(g.x+g.w,g.y+g.h/2);ctx.stroke();}else{ctx.fillStyle='#8f785b';ctx.fillRect(g.x,g.y,g.w,g.h);ctx.lineWidth=1;for(let x=g.x+4;x<g.x+g.w;x+=9){ctx.beginPath();ctx.moveTo(x,g.y);ctx.lineTo(x+3,g.y+g.h);ctx.stroke();}}ctx.restore();}
     for(const w of m.worms||[]){ctx.save();for(let i=6;i>=0;i--){const p=world.wormPoint(w,i*.13);ctx.beginPath();ctx.ellipse(p.x,p.y,6.5-i*.35,5.5-i*.2,0,0,Math.PI*2);ctx.fillStyle=i%2?'#b8796b':'#d39d88';ctx.fill();ctx.strokeStyle='#815544';ctx.lineWidth=.7;ctx.stroke();}const p=world.wormPoint(w);ctx.fillStyle='#fff3df';ctx.beginPath();ctx.arc(p.x+2,p.y-2,2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#422c20';ctx.beginPath();ctx.arc(p.x+2.6,p.y-2,1,0,Math.PI*2);ctx.fill();ctx.restore();}
   }
-  function drawHint(){ctx.save();ctx.lineWidth=2;ctx.setLineDash([5,8]);ctx.lineDashOffset=-world.time*12;ctx.strokeStyle='#fff9e1b0';ctx.shadowColor='#614224';ctx.shadowBlur=3;for(const route of levels[current].routes){ctx.beginPath();route.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();const p=route.at(-1);ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(p[0]-5,p[1]-8);ctx.lineTo(p[0],p[1]);ctx.lineTo(p[0]+5,p[1]-8);ctx.stroke();ctx.setLineDash([5,8]);}ctx.restore();}
+  function docksDraw(){
+    for(const j of world.jars){const p=colors[j.color],x=j.homeX;ctx.save();ctx.strokeStyle=p.mid;ctx.fillStyle='#37251e';ctx.lineWidth=3;roundRect(ctx,x-43,580,86,24,5);ctx.fill();ctx.stroke();ctx.fillStyle=p.light;ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(j.waiting.length?`暂存 ${j.waiting.length}`:p.label,x,613);
+      for(let i=0;i<Math.min(j.waiting.length,8);i++)marble(ctx,x-32+(i%8)*9,587-Math.floor(i/8)*9,5,j.color);
+      if(Math.abs(j.x-j.homeX)<9){ctx.strokeStyle=p.mid+'66';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-25,604);ctx.lineTo(x-20,616);ctx.moveTo(x+25,604);ctx.lineTo(x+20,616);ctx.stroke();}ctx.restore();}
+  }
+  function porterDraw(front=false){
+    const p=world.porter;if(!p)return;const j=world.jars[p.jar],t=world.time,moving=p.moving,bob=moving?Math.sin(t*22)*2:Math.sin(t*3)*1.2,x=j.x,y=630-j.lift;
+    ctx.save();ctx.translate(x,y);ctx.lineCap='round';ctx.lineJoin='round';
+    const ellipse=(x,y,rx,ry,fill)=>{ctx.fillStyle=fill;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();};
+    if(!front){ellipse(0,108+j.lift,48,7,'#160e0a50');const step=moving?Math.sin(t*22)*7:0;ctx.strokeStyle='#665b4d';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(-17,65);ctx.lineTo(-20+step,96+j.lift);ctx.moveTo(17,65);ctx.lineTo(20-step,96+j.lift);ctx.stroke();ellipse(-25+step,103+j.lift,17,8,'#36251e');ellipse(25-step,103+j.lift,17,8,'#36251e');ellipse(0,31,37,43,'#bd7442');
+      // A tiny head, an oversized jar and knees buckling under its weight.
+      ctx.save();ctx.translate(0,-29+bob);ctx.rotate(moving?Math.sin(t*11)*.07:-.08);ellipse(0,0,24,23,'#efc698');ellipse(-22,1,5,7,'#e1af83');ellipse(22,1,5,7,'#e1af83');ellipse(-12,7,7,4,'#d78f75');ellipse(12,7,7,4,'#d78f75');ctx.strokeStyle='#50352a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-13,-3);ctx.lineTo(-6,-1);ctx.moveTo(6,-1);ctx.lineTo(13,-3);ctx.stroke();ellipse(0,4,5,4,'#dba27c');if(p.phase==='rest')ellipse(0,14,4,5,'#673d2e');else{ctx.beginPath();ctx.moveTo(-6,13);ctx.quadraticCurveTo(0,9,6,13);ctx.stroke();}ellipse(0,-19,27,11,'#d9a844');ctx.fillStyle='#e7bd5c';roundRect(ctx,-22,-34,44,20,10);ctx.fill();ctx.strokeStyle='#ba8333';ctx.beginPath();ctx.moveTo(0,-31);ctx.lineTo(0,-17);ctx.stroke();ctx.restore();
+      if(p.phase==='rest'||p.phase==='lift'){const side=x>420?-1:1;ctx.fillStyle='#fff1d9';roundRect(ctx,side>0?31:-96,-58,65,26,12);ctx.fill();ctx.fillStyle='#785038';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText(p.phase==='rest'?'呼…好重':'嘿——咻',side>0?63:-63,-40);}
+      if(p.phase!=='home'){ctx.fillStyle='#9dd7df';ctx.beginPath();ctx.moveTo(29,-25);ctx.quadraticCurveTo(21,-12,30,-12);ctx.quadraticCurveTo(36,-15,29,-25);ctx.fill();}
+    }else{ctx.strokeStyle='#bd7442';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(-32,0);ctx.quadraticCurveTo(-62,12,-46,39);ctx.moveTo(32,0);ctx.quadraticCurveTo(62,12,46,39);ctx.stroke();ellipse(-45,40,8,7,'#efc698');ellipse(45,40,8,7,'#efc698');}
+    ctx.restore();
+  }
   function render(){
-    syncTerrain();ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.save();ctx.shadowColor='#281a16b0';ctx.shadowBlur=7;ctx.shadowOffsetY=3;ctx.drawImage(soil,0,0);ctx.restore();levels[current].rocks.forEach(rockDraw);mechanismDraw();if(hint&&world.state==='playing')drawHint();
-    for(const b of world.balls)if(b.active){marble(ctx,b.x,b.y,b.r,b.color);drawMaterial(b);}world.jars.forEach(jarDraw);
+    syncTerrain();ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.save();ctx.shadowColor='#281a16b0';ctx.shadowBlur=7;ctx.shadowOffsetY=3;ctx.drawImage(soil,0,0);ctx.restore();levels[current].rocks.forEach(rockDraw);mechanismDraw();docksDraw();porterDraw();
+    for(const b of world.balls)if(b.active){marble(ctx,b.x,b.y,b.r,b.color);drawMaterial(b);}world.jars.forEach(jarDraw);porterDraw(true);
     for(const p of particles){ctx.globalAlpha=Math.max(0,Math.min(1,p.life*1.7));ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;
     if(cursor&&world.state==='playing'){ctx.beginPath();ctx.arc(cursor.x,cursor.y,brush,0,Math.PI*2);ctx.strokeStyle=pointer?'#fff8e7aa':'#fff8e770';ctx.lineWidth=1;ctx.stroke();ctx.beginPath();ctx.arc(cursor.x,cursor.y,2,0,Math.PI*2);ctx.fillStyle='#fff9e8c0';ctx.fill();}
-    $('#board-wrap').classList.toggle('quaking',!reducedMotion&&world.quakeLeft>0);
+
   }
   function drainEvents(){
-    for(const e of world.events){sound.play(e.type,e.count||e.speed||0);if(e.type==='collect')for(let i=0;i<6;i++)particles.push({x:e.x,y:583,vx:(random()-.5)*80,vy:-random()*80,life:.6,color:colors[e.color].mid,size:2});if(e.type==='quake'){status('地震来了：看看虚线框附近，必要时补挖一点沙。');quakeStatusUntil=world.time+2;for(const p of levels[current].mechanics.quake.patches)for(let i=0;i<12;i++)particles.push({x:p.x+random()*p.w,y:p.y,vx:(random()-.5)*35,vy:random()*60,life:1,color:'#d4bf99',size:2});}}
-    world.events.length=0;
-    (levels[current].mechanics.gates||[]).forEach((g,i)=>{const open=world.gateOpen(g);if(lastGateStates[i]!==undefined&&lastGateStates[i]!==open)sound.play('gate');lastGateStates[i]=open;});
-    if(world.started&&levels[current].mechanics.worms)sound.play('worm');if(quakeStatusUntil&&world.time>quakeStatusUntil){status(levels[current].note);quakeStatusUntil=0;}
-    if(world.state!=='playing')finish();
+    for(const e of world.events){sound.play(e.type,e.count||e.speed||0);if(e.type==='collect')for(let i=0;i<6;i++)particles.push({x:e.x,y:613,vx:(random()-.5)*80,vy:-random()*80,life:.6,color:colors[e.color].mid,size:2});}
+    world.events.length=0;if(world.started&&levels[current].mechanics.worms)sound.play('worm');if(world.state!=='playing')finish();
   }
   function frame(time){const delta=Math.min((time-lastTime)/1000||0,.05);lastTime=time;const paused=document.hidden||$('#level-dialog').open||$('#rules-dialog').open;
     if(!paused){if(world.state==='playing'){accumulator+=delta;while(accumulator>=STEP&&world.state==='playing'){world.step(STEP);accumulator-=STEP;}drainEvents();}for(const p of particles){p.x+=p.vx*delta;p.y+=p.vy*delta;p.vy+=150*delta;p.life-=delta;}particles=particles.filter(p=>p.life>0);updateHud();render();}else accumulator=0;requestAnimationFrame(frame);
@@ -115,13 +120,13 @@
   canvas.addEventListener('pointerdown',e=>{if(world.state!=='playing'||pointer||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();pointer={...position(e),id:e.pointerId};cursor=pointer;canvas.setPointerCapture(e.pointerId);dig(pointer,pointer);});
   canvas.addEventListener('pointermove',e=>{const p=position(e);cursor=p;if(pointer?.id===e.pointerId){dig(pointer,p);pointer={...p,id:e.pointerId};}});
   for(const event of ['pointerup','pointercancel'])canvas.addEventListener(event,e=>{if(pointer?.id===e.pointerId)releasePointer();if(e.pointerType!=='mouse')cursor=null;});canvas.addEventListener('lostpointercapture',()=>pointer=null);canvas.addEventListener('pointerleave',()=>{if(!pointer)cursor=null;});
-  $('#restart').addEventListener('click',()=>load(current));$('#hint').addEventListener('click',()=>{hint=!hint;$('#hint').setAttribute('aria-pressed',String(hint));status(hint?'沿虚线从罐口往上挖，再接通珠子；提示不扣星。':levels[current].note);});
+  $('#restart').addEventListener('click',()=>load(current));
   $('#result-action').addEventListener('click',()=>load(world.state==='won'?(current+1)%levels.length:current));$('#result-replay').addEventListener('click',()=>load(current));
   $('#choose-level').addEventListener('click',()=>{releasePointer();updateLevelGrid();$('#level-dialog').showModal();});$('#rules').addEventListener('click',()=>{releasePointer();$('#rules-dialog').showModal();});
   document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.close).close()));
   document.querySelectorAll('[data-brush]').forEach(b=>b.addEventListener('click',()=>{brush=Number(b.dataset.brush);document.querySelectorAll('[data-brush]').forEach(btn=>{const active=Number(btn.dataset.brush)===brush;btn.classList.toggle('selected',active);btn.setAttribute('aria-pressed',String(active));});}));
   $('#sound').addEventListener('click',async()=>{const button=$('#sound');button.disabled=true;try{const on=await sound.toggle();button.setAttribute('aria-label',on?'关闭音效':'开启音效');button.setAttribute('aria-pressed',String(on));button.title=on?'关闭音效':'开启音效';$('#sound-label').textContent=on?'音效 开':'音效 关';$('#sound-waves').setAttribute('d',on?'M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14':'m16 9 5 6m0-6-5 6');}catch(e){status(e.message);}finally{button.disabled=false;}});
   document.addEventListener('visibilitychange',()=>{lastTime=performance.now();accumulator=0;releasePointer();});
-  window.sandGame=Object.freeze({snapshot:()=>({level:current+1,...world.snapshot(),hint,brush,soundEnabled:sound.enabled,audioPlayed:sound.played,best:[...best]}),routes:()=>structuredClone(levels[current].routes),levels:()=>levels.map(l=>({id:l.id,title:l.title,features:[...l.features]}))});
+  window.sandGame=Object.freeze({snapshot:()=>({level:current+1,...world.snapshot(),brush,soundEnabled:sound.enabled,audioPlayed:sound.played,best:[...best]}),levels:()=>levels.map(l=>({id:l.id,title:l.title,features:[...l.features]}))});
   load(0);requestAnimationFrame(frame);
 })();
