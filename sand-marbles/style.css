@@ -39,3 +39,5 @@
 }
 .result-overlay{backdrop-filter:none;background:#37261742}.result-card .result-record{font-size:13px;color:#54643e;background:#e9eedf;padding:8px;border-radius:6px;margin:10px 0}.game-dialog .session-summary{font-size:14px;color:#4e633b;background:#e8eedf;padding:12px;border-radius:7px}.sand-record{color:#61523d!important}.game-actions button[hidden],.result-card [hidden]{display:none!important}.game-actions:has(#return-result:not([hidden])){display:flex;flex-wrap:wrap;gap:6px}.game-actions:has(#return-result:not([hidden])) button{flex:1;white-space:nowrap}
 .game-dialog{scroll-padding-top:100px}.dialog-heading{position:sticky;top:0;z-index:3;background:#faf6ed;box-shadow:0 9px 9px #faf6ed}.dialog-heading button{flex-shrink:0}
+.dialog-heading::before{content:'';position:absolute;inset:-28px -28px 0;background:#faf6ed;z-index:-1;pointer-events:none}
+.game-dialog{overflow-x:hidden}.dialog-heading::before{left:-26px;right:-26px}@media(max-width:799px){.dialog-heading::before{left:-14px;right:-14px;top:-20px}}

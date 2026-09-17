@@ -51,3 +51,7 @@ python3 -m http.server 4188 --bind 127.0.0.1
 GitHub Pages 发布源为 `main` 分支根目录 `/`，`.nojekyll` 禁用 Jekyll。推送到 `main` 后由 GitHub Pages 自动更新。
 
 无需 API 密钥、环境变量、服务端或第三方运行时依赖。
+
+## 试玩与整改
+
+三位子 Agent 的独立试玩评分、问题处理、复测及发布证据见 [试玩整改记录](docs/playtest-review.md)。评审通过浏览器实际操作完成，区别于自动解法回归，也不等同招募真人测试。
