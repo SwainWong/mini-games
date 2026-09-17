@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#141d25">
 <meta name="description" content="消除宝石，疏通落石，救出国王。两个有真实落石碰撞的城堡谜题。"><title>国王消消乐 · Mini Games</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='52'%3E♛%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="style.css?v=2">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='52'%3E♛%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <div class="app">
@@ -22,13 +22,13 @@
 <div class="story-footer">两段历险 · 随时重来 · 无需登录</div>
 </aside>
 <section class="game-shell" aria-label="国王消消乐游戏">
-<div class="game-top"><div><span class="kicker" id="chapter-label">LEVEL 01 / 02</span><h2 id="level-title">王室金库</h2></div><div class="top-actions"><button id="choose-level" aria-label="选择关卡" title="选择关卡">选关</button><button id="sound" aria-label="开启音效" aria-pressed="false" title="开启音效">音效 关</button></div></div>
-<div class="hud"><div class="hud-cell"><span>有效交换</span><b id="moves">0</b></div><div class="hud-cell drainage"><div><span>安全排出</span><b><strong id="collected">0</strong> <small>/ <span id="target">100</span></small></b></div><div class="meter"><i id="drain-fill"></i></div></div><div class="hud-cell shield-stat"><span id="shield-state">后退余地</span><b id="health">100<small>%</small></b></div></div>
+<div class="game-top"><div><span class="kicker" id="chapter-label">LEVEL 01 / 02</span><h2 id="level-title">王室金库</h2><span class="action-count">交换 <b id="actions">0</b> 次</span></div><div class="top-actions"><button id="choose-level" aria-label="选择关卡" title="选择关卡">选关</button><button id="sound" aria-label="开启音效" aria-pressed="false" title="开启音效">音效 关</button></div></div>
+<div class="hud"><div class="hud-cell hp-stat"><span>国王生命</span><b id="hp">100<small> HP</small></b><div class="hp-meter"><i id="hp-fill"></i></div></div><div class="hud-cell drainage"><div><span>安全排出</span><b><strong id="collected">0</strong> <small>/ <span id="target">100</span></small></b></div><div class="meter"><i id="drain-fill"></i></div></div><div class="hud-cell shield-stat"><span id="shield-state">后退余地</span><b id="clearance">100<small>%</small></b></div></div>
 <div class="board-wrap">
 <canvas id="game" width="432" height="780" tabindex="0" aria-label="宝石棋盘：点击或滑动交换相邻宝石，横竖三颗以上同色才能消除。方向键选择，空格选中宝石。">你的浏览器需要支持 Canvas。</canvas>
-<div class="overlay" id="ready"><div class="ready-card"><span class="modal-kicker">陛下需要你的帮助</span><h3 id="ready-title">把落石，送到下面。</h3><p id="ready-description">交换相邻宝石，横竖连成至少三颗。<br>打开通道，救国王远离尖刺。</p><button class="gold-button" id="start" disabled>正在准备王国…</button><small>落石不断 · 及时卸压 · 远离尖刺</small></div></div>
+<div class="overlay" id="ready"><div class="ready-card"><span class="modal-kicker">陛下需要你的帮助</span><h3 id="ready-title">把落石，送到下面。</h3><p id="ready-description">交换相邻宝石，横竖连成至少三颗。<br>打开通道，救国王远离尖刺。</p><button class="gold-button" id="start" disabled>正在准备王国…</button><small>100 HP · 宝石会下落 · 碰刺持续扣血</small></div></div>
 <div class="overlay result" id="result" hidden><div class="result-card"><div id="stars" class="stars">✦ ✦ ✦</div><span class="modal-kicker" id="result-kicker">RESCUE COMPLETE</span><h3 id="result-title">国王得救了！</h3><p id="result-detail"></p><button class="gold-button" id="result-next">下一关 →</button><button class="quiet-button" id="result-retry">再试一次</button></div></div>
-<div class="overlay pause" id="pause-overlay" hidden><div class="ready-card"><span class="modal-kicker">TAKE YOUR TIME</span><h3>歇一会儿，国王等你。</h3><p>落石和国王的移动已暂停。</p><button class="gold-button" id="resume">继续救援</button></div></div>
+<div class="overlay pause" id="pause-overlay" hidden><div class="ready-card"><span class="modal-kicker">TAKE YOUR TIME</span><h3>歇一会儿，国王等你。</h3><p>落石、宝石下落与 HP 扣减已暂停。</p><button class="gold-button" id="resume">继续救援</button></div></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </div>
 <div class="controls"><button id="restart">↻ <span>重来</span></button><button id="hint">✧ <span>提示</span></button><button id="remix">⤨ <span id="remix-label">重排 2</span></button><button id="pause">Ⅱ <span>暂停</span></button><button id="rules">? <span>玩法</span></button></div>
@@ -37,7 +37,7 @@
 </main>
 <footer class="page-footer"><span>一点策略，一点运气，还有一位需要你的国王。</span><span>THE KING'S LITTLE ESCAPE</span></footer>
 </div>
-<dialog id="rules-dialog"><div class="dialog-head"><span class="modal-kicker">皇家救援手册</span><button data-close="rules-dialog" aria-label="关闭玩法">×</button></div><h2>消掉宝石，疏通落石。</h2><ol><li><b>交换相邻宝石，横竖三消</b><p>点一颗，再点上下左右相邻的一颗；也可以滑动交换。只有横向或纵向至少 3 颗同色连成线才消除。两个相同不会消除，无效交换会退回。</p></li><li><b>消除留下空洞，连通排石路线</b><p>宝石不会补位。石头真的从底部落出才算排出；只消旁边的宝石不会减压。第二关需绕过灰色石梁。</p></li><li><b>落石不断，国王会被推向尖刺</b><p>石头挤住盾牌会推着国王后退。疏通后压力减小，国王能站稳或向前顶。身体碰到身后尖刺即失败，右上方显示剩余后退空间。</p></li><li><b>持续减压，才能获救</b><p>排出目标数量，并在安全距离内保持低压力 2 秒，就会关闭供料闸门。没有步数耗尽惩罚。每关可重排颜色 2 次，空洞保留，落石仍继续。</p></li></ol><p class="dialog-note">有效交换越少星级越高，第一关 ≤5 次、第二关 ≤7 次获 3 星，多 3 次以内获 2 星。可随时暂停思考或重来；刷新清空进度。键盘方向键选择，空格依次选择两颗相邻宝石。</p><button class="gold-button" data-close="rules-dialog">明白了</button></dialog>
+<dialog id="rules-dialog"><div class="dialog-head"><span class="modal-kicker">皇家救援手册</span><button data-close="rules-dialog" aria-label="关闭玩法">×</button></div><h2>消掉宝石，疏通落石。</h2><ol><li><b>交换相邻宝石，横竖三消</b><p>点一颗，再点上下左右相邻的一颗；也可以滑动交换。只有横向或纵向至少 3 颗同色连成线才消除。两个相同不会消除，无效交换会退回。</p></li><li><b>宝石下落连锁，连通排石路线</b><p>消除后上方宝石会向下落，落稳形成三连会自动连锁；不会生成新宝石。石头从底部落出才计数，第二关需绕过承重石台。</p></li><li><b>落石不断，国王会被推向尖刺</b><p>石头挤住盾牌会推着国王后退。疏通后压力减小，国王能站稳或向前顶。国王有 100 HP。碰刺先扣 12 HP，持续贴住每 0.8 秒再扣 12 HP；离开尖刺就停止受伤，HP 归零才失败。右侧显示后退空间。</p></li><li><b>持续减压，才能获救</b><p>排出目标数量，并在安全距离内保持低压力 2 秒，就会关闭供料闸门。没有步数耗尽惩罚。每关可重排颜色 2 次，只改变落稳宝石颜色，落石仍继续。</p></li></ol><p class="dialog-note">有效交换越少星级越高，第一关 ≤5 次、第二关 ≤6 次获 3 星，多 3 次以内获 2 星。可随时暂停思考或重来；刷新清空进度。键盘方向键选择，空格依次选择两颗相邻宝石。</p><button class="gold-button" data-close="rules-dialog">明白了</button></dialog>
 <dialog id="level-dialog"><div class="dialog-head"><span class="modal-kicker">CHOOSE YOUR ADVENTURE</span><button data-close="level-dialog" aria-label="关闭选关">×</button></div><h2>两段王室历险</h2><div class="level-options"><button data-level="0"><b>01 · 王室金库</b><span>三消开路 · 持续落石</span></button><button data-level="1"><b>02 · 水晶密室</b><span>绕梁疏导 · 真实退步</span></button></div><p class="dialog-note">随时选关。刷新后从第一关重新开始。</p></dialog>
-<script src="levels.js?v=2"></script><script src="match.js?v=2"></script><script src="engine.js?v=2"></script><script src="renderer.js?v=2"></script><script src="audio.js?v=2"></script><script src="game.js?v=2"></script>
+<script src="levels.js?v=3"></script><script src="match.js?v=3"></script><script src="engine.js?v=3"></script><script src="renderer.js?v=3"></script><script src="audio.js?v=3"></script><script src="game.js?v=3"></script>
 </body></html>
