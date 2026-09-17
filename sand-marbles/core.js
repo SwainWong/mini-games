@@ -1,6 +1,7 @@
 /* Shared deterministic terrain, scoring and physics. No DOM, network or persistence. */
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.SandCore=api;})(globalThis,()=>{
   'use strict';
+  const Rival=typeof module==='object'?require('./rival.js'):globalThis.SandRival;
   const W=560,H=760,BOTTOM=564,CELL=2,GW=W/CELL,GH=BOTTOM/CELL,STEP=1/120;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const TYPES={glass:{r:8.5,mass:1,gravity:740,bounce:.08},heavy:{r:10,mass:2.4,gravity:900,bounce:.04},rubber:{r:8.5,mass:.8,gravity:740,bounce:.48},light:{r:8,mass:.45,gravity:400,bounce:.12}};
@@ -23,13 +24,13 @@
   }
   function setupTerrain(level){const t=new Terrain(level.rocks);for(const p of level.tunnels)t.path(p,30,'initial');for(const g of level.groups)t.dig(g.x,g.y,40,'initial');return t;}
   function budgets(level){return {...level.budget};}
-  const phases=[['lift',.8,0],['walk',1.4,.55],['rest',1.1,.55],['walk',1.5,1],['rest',1.3,1],['return',1.5,.5],['rest',.9,.5],['return',1.5,0],['home',4.5,0]];
+  const phases=[['lift',.45,0],['walk',.65,.55],['rest',.7,.55],['walk',.7,1],['rest',.85,1],['return',.7,.5],['rest',.65,.5],['return',.7,0],['home',3.8,0]];
   const jarMouth=j=>({x:j.x,y:590-j.lift,halfWidth:46});
   class World{
     constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=false;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;
       if(level.mechanics.porter)this.choosePorter();
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
-      this.total=this.balls.length;
+      this.total=this.balls.length;this.rival=level.mechanics.rival?new Rival(level,this.balls):null;
     }
     dig(a,b,r=24){if(this.state!=='playing')return 0;this.started=true;return this.terrain.line(a,b,r);}
     random(){this.seed=(Math.imul(this.seed,1664525)+1013904223)>>>0;return this.seed/4294967296;}
@@ -72,11 +73,12 @@
         if(b.active&&b.y>620){this.end(false,'珠子错过了罐口。罐子会移动，留意它停下的位置和时机。',{kind:'missed',x:b.x,y:b.y,color:b.color});return;}
       }
       if(this.collected===this.total)this.end(true);
+      else if(this.started&&this.rival){this.rival.step(this,dt);if(this.state!=='playing')return;}
       for(const j of this.jars)j.flash=Math.max(0,j.flash-dt*2);
     }
     end(won,reason='',failure=null){this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{state:this.state,collected:this.collected,total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{state:this.state,collected:this.collected,total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,rating,budgets};
 });

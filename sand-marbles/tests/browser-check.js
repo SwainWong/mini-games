@@ -4,7 +4,7 @@ async (page) => {
   const solutions=/* SOLUTIONS */ null;
   const timing=/* TIMING */ null;
   // Deterministic test-only random choice; player pages still use real randomness.
-  await page.addInitScript(()=>{Math.random=()=>1/4294967296;});await page.reload();await page.waitForFunction(()=>window.sandGame);
+  await page.addInitScript(()=>{Math.random=()=>1/4294967296;});await page.reload();await page.waitForFunction(()=>window.sandGame?.snapshot().assetsReady);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));const results=[];
   for(let number=from;number<=to;number++){
     await page.getByRole('button',{name:'选择关卡'}).click();
