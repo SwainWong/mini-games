@@ -1,137 +1,56 @@
 (() => {
   'use strict';
-  const canvas = document.querySelector('#game'), ctx = canvas.getContext('2d');
-  const W = 560, H = 680, SOIL_BOTTOM = 564, CELL = 2, GW = W / CELL, GH = SOIL_BOTTOM / CELL;
-  const BRUSH = 29, R = 8.5, STEP = 1 / 120;
-  const colors = {
-    amber: { light: '#fff2d8', mid: '#e89a50', base: '#a7481f', dark: '#54200f', label: '琥珀' },
-    blue: { light: '#effaff', mid: '#a3c8dc', base: '#557d99', dark: '#243b54', label: '冰蓝' },
-    jade: { light: '#f1ffe2', mid: '#b1c68b', base: '#64875c', dark: '#344b33', label: '青玉' }
-  };
-  const levels = [
-    {
-      title: '初识沙径', note: '接通断开的沙径，送两种颜色的珠子回家。',
-      jars: [{ x: 136, color: 'blue' }, { x: 420, color: 'amber' }],
-      groups: [{ x: 165, y: 116, color: 'blue', count: 8 }, { x: 416, y: 114, color: 'amber', count: 7 }, { x: 406, y: 296, color: 'amber', count: 7 }],
-      tunnels: [ [[165,125],[208,182],[158,244],[124,311]], [[208,182],[260,130]], [[158,244],[91,218]], [[131,395],[123,470],[136,562]], [[131,395],[226,443]], [[415,396],[460,437],[448,506],[420,564]] ],
-      rocks: [],
-      routes: [ [[165,116],[181,207],[126,308],[127,408],[136,575]], [[416,114],[406,296],[415,393],[454,442],[445,509],[420,575]] ]
-    },
-    {
-      title: '各走各的路', note: '石块挖不动。绕过去，让两条路线保持分开。',
-      jars: [{ x: 126, color: 'amber' }, { x: 434, color: 'blue' }],
-      groups: [{ x: 148, y: 126, color: 'amber', count: 10 }, { x: 407, y: 126, color: 'blue', count: 10 }],
-      tunnels: [ [[148,125],[125,189]], [[407,125],[428,208]], [[99,398],[128,460],[126,562]], [[460,475],[434,564]] ],
-      rocks: [{ x: 160, y: 310, rx: 62, ry: 49 }, { x: 399, y: 381, rx: 60, ry: 53 }],
-      routes: [ [[148,126],[101,201],[65,284],[69,357],[101,415],[128,481],[126,575]], [[407,126],[454,232],[491,338],[489,418],[461,478],[434,575]] ]
-    },
-    {
-      title: '三色归途', note: '三种颜色，三条沙径。留意中央石块和下方的珠子。',
-      jars: [{ x: 94, color: 'amber' }, { x: 280, color: 'jade' }, { x: 466, color: 'blue' }],
-      groups: [{ x: 104, y: 113, color: 'amber', count: 6 }, { x: 143, y: 288, color: 'amber', count: 5 }, { x: 280, y: 124, color: 'jade', count: 10 }, { x: 451, y: 113, color: 'blue', count: 6 }, { x: 429, y: 306, color: 'blue', count: 5 }],
-      tunnels: [ [[104,119],[119,180]], [[280,131],[280,208]], [[451,120],[437,191]], [[95,463],[94,564]], [[466,452],[466,564]], [[319,490],[280,564]] ],
-      rocks: [{ x: 270, y: 363, rx: 51, ry: 57 }, { x: 175, y: 441, rx: 30, ry: 25 }],
-      routes: [ [[104,113],[124,219],[143,288],[104,372],[90,467],[94,575]], [[280,124],[282,223],[349,292],[351,398],[329,471],[280,575]], [[451,113],[437,217],[429,306],[466,403],[466,575]] ]
-    }
-  ];
-  const soil = document.createElement('canvas'); soil.width = W; soil.height = SOIL_BOTTOM;
-  const sc = soil.getContext('2d');
-  const earth = document.createElement('canvas'); earth.width = W; earth.height = H;
-  const ec = earth.getContext('2d');
-  let grid, balls, jars, particles = [], current = 0, state = 'playing', hint = false, dragged = false;
-  let pointer = null, cursor = null, elapsed = 0, accumulator = 0, lastTime = 0, collected = 0, total = 0;
-  let muted = true, audioContext, completion = new Set();
-  let seed = 32;
-  function random() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
-  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const {W,H,BOTTOM:SOIL_BOTTOM,GW,CELL,STEP,World}=SandCore,levels=SandLevels;
+  const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),$=s=>document.querySelector(s);
+  const colors={amber:{light:'#fff2d8',mid:'#e89a50',base:'#a7481f',dark:'#54200f',label:'琥珀'},blue:{light:'#effaff',mid:'#a3c8dc',base:'#557d99',dark:'#243b54',label:'冰蓝'},jade:{light:'#f1ffe2',mid:'#b1c68b',base:'#64875c',dark:'#344b33',label:'青玉'},rose:{light:'#fff0f2',mid:'#e1a1b1',base:'#ab597d',dark:'#612e4b',label:'玫瑰'}};
+  const features={worm:['〰','蚯蚓'],quake:['≈','地震 × 2'],wind:['↝','风口'],mud:['▨','黏土'],gate:['▥','定时闸门'],magnet:['∩','磁石']};
+  const typeLabels={glass:'● 玻璃珠',heavy:'⊕ 重力珠',rubber:'◎ 弹力珠',light:'✧ 轻盈珠'};
+  const soil=document.createElement('canvas'),texture=document.createElement('canvas'),earth=document.createElement('canvas');soil.width=texture.width=earth.width=W;soil.height=texture.height=SOIL_BOTTOM;earth.height=H;
+  const sc=soil.getContext('2d'),tc=texture.getContext('2d'),ec=earth.getContext('2d'),sound=new SandAudio(),best=new Map();
+  let world,current=0,brush=24,hint=false,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],seed=42,lastHud='',finished=false,lastGateStates=[],quakeStatusUntil=0;
+  const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
   function roundRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
-  function makeTextures() {
-    seed = 42 + current;
-    const data = sc.createImageData(W, SOIL_BOTTOM);
-    for (let y = 0; y < SOIL_BOTTOM; y++) for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      const grain = (random() - .5) * 24 + (random() < .018 ? -30 : 0);
-      const cloud = Math.sin(x / 49 + Math.sin(y / 58)) * 2.5 + Math.cos(y / 64) * 3;
-      data.data[i] = 221 + grain + cloud; data.data[i + 1] = 213 + grain + cloud; data.data[i + 2] = 201 + grain + cloud; data.data[i + 3] = 255;
+  function status(text){$('#status').textContent=text;}
+  function makeTextures(){
+    seed=42+current;const data=tc.createImageData(W,SOIL_BOTTOM);
+    for(let y=0;y<SOIL_BOTTOM;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4,grain=(random()-.5)*24+(random()<.018?-30:0),cloud=Math.sin(x/49+Math.sin(y/58))*2.5+Math.cos(y/64)*3;data.data[i]=221+grain+cloud;data.data[i+1]=213+grain+cloud;data.data[i+2]=201+grain+cloud;data.data[i+3]=255;}
+    tc.putImageData(data,0,0);sc.clearRect(0,0,W,SOIL_BOTTOM);sc.drawImage(texture,0,0);
+    const gradient=ec.createLinearGradient(0,0,W,H);gradient.addColorStop(0,'#462719');gradient.addColorStop(.45,'#713d25');gradient.addColorStop(1,'#4e2617');ec.fillStyle=gradient;ec.fillRect(0,0,W,H);
+    for(let i=0;i<24000;i++){ec.fillStyle=random()>.5?'#e6a87809':'#17080110';ec.fillRect(random()*W,random()*H,1,1);}ec.fillStyle='#2a170925';ec.fillRect(0,SOIL_BOTTOM,W,H-SOIL_BOTTOM);syncTerrain();
+  }
+  function syncTerrain(){for(const i of world.terrain.changes){const x=i%GW*CELL,y=Math.floor(i/GW)*CELL;if(world.terrain.grid[i])sc.drawImage(texture,x,y,2,2,x,y,2,2);else sc.clearRect(x,y,2,2);}world.terrain.changes.length=0;}
+  function updateLevelGrid(){
+    const grid=$('#level-grid');grid.replaceChildren();
+    for(let chapter=0;chapter<3;chapter++){const title=document.createElement('h3');title.textContent=['01—05 · 初识沙径','06—10 · 地下奇遇','11—15 · 沙径大师'][chapter];grid.append(title);const row=document.createElement('div');row.className='chapter-grid';
+      for(let i=chapter*5;i<chapter*5+5;i++){const b=document.createElement('button');b.dataset.level=i;b.setAttribute('aria-label',`第 ${i+1} 关：${levels[i].title}`);b.className=i===current?'active':'';const num=document.createElement('b');num.textContent=String(i+1).padStart(2,'0');const name=document.createElement('span');name.textContent=levels[i].title;const stars=document.createElement('small');stars.className='earned-stars';stars.textContent=best.has(i)?'★'.repeat(best.get(i)):'未通关';b.append(num,name,stars);b.addEventListener('click',()=>{$('#level-dialog').close();load(i);});row.append(b);}grid.append(row);
     }
-    sc.globalCompositeOperation = 'source-over'; sc.putImageData(data, 0, 0);
-    const gradient = ec.createLinearGradient(0,0,W,H); gradient.addColorStop(0,'#462719');gradient.addColorStop(.45,'#713d25');gradient.addColorStop(1,'#4e2617');
-    ec.fillStyle = gradient;ec.fillRect(0,0,W,H);
-    for(let i=0;i<32000;i++){const x=random()*W,y=random()*H;ec.fillStyle=random()>.5?'#e6a87809':'#17080110';ec.fillRect(x,y,1,1);}
-    ec.fillStyle='#2a170925';ec.fillRect(0,SOIL_BOTTOM,W,H-SOIL_BOTTOM);
   }
-  function carve(x,y,r = BRUSH, dust = false) {
-    if (y < 51 || y > SOIL_BOTTOM + r) return;
-    sc.globalCompositeOperation = 'destination-out';sc.beginPath();sc.arc(x,y,r,0,Math.PI*2);sc.fill();
-    let removed = 0;
-    const xa=clamp(Math.floor((x-r)/CELL),0,GW-1),xb=clamp(Math.ceil((x+r)/CELL),0,GW-1);
-    const ya=clamp(Math.floor((y-r)/CELL),0,GH-1),yb=clamp(Math.ceil((y+r)/CELL),0,GH-1);
-    for(let gy=ya;gy<=yb;gy++)for(let gx=xa;gx<=xb;gx++)if((gx*CELL+1-x)**2+(gy*CELL+1-y)**2<r*r){removed+=grid[gy*GW+gx];grid[gy*GW+gx]=0;}
-    if(dust&&removed>6){for(let i=0;i<4;i++)particles.push({x:x+(random()-.5)*r,y:y+(random()-.5)*r,vx:(random()-.5)*70,vy:random()*60,life:.35+random()*.3,color:'#d2bfa1',size:1+random()*2});}
-  }
-  function carveLine(a,b,r=BRUSH,dust=false){const d=Math.hypot(b[0]-a[0],b[1]-a[1]),steps=Math.max(1,Math.ceil(d/5));for(let i=0;i<=steps;i++){const t=i/steps;carve(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,r,dust&&i%3===0);}}
-  function pathCarve(points,r){for(let i=1;i<points.length;i++)carveLine(points[i-1],points[i],r);}
-  function solid(x,y){if(x<0||x>=W||y<0)return true;if(y>=SOIL_BOTTOM)return false;return grid[Math.floor(y/CELL)*GW+Math.floor(x/CELL)]===1;}
-  function status(text){document.querySelector('#status').textContent=text;}
   function load(index){
-    current=index;state='playing';hint=false;dragged=false;pointer=null;cursor=null;particles=[];collected=0;elapsed=0;accumulator=0;
-    grid=new Uint8Array(GW*GH).fill(1);balls=[];jars=levels[index].jars.map(j=>({...j,balls:[],flash:0}));
-    makeTextures();levels[index].tunnels.forEach(p=>pathCarve(p,31));
-    for(const group of levels[index].groups){
-      carve(group.x,group.y,40);
-      for(let i=0;i<group.count;i++){const row=Math.floor(i/4),col=i%4,count=Math.min(4,group.count-row*4);balls.push({x:group.x+(col-(count-1)/2)*18,y:group.y+19-row*17,vx:0,vy:0,color:group.color,r:R,active:true});}
-    }
-    total=balls.length;
-    document.querySelector('#level-number').textContent=String(index+1).padStart(2,'0');document.querySelector('#level-title').textContent=levels[index].title;
-    document.querySelector('#collected').textContent=`0 / ${total}`;
-    document.querySelector('#result').hidden=true;document.querySelector('#hint').setAttribute('aria-pressed','false');
-    document.querySelector('#board-instruction').textContent='按住并划动，挖出一条路';
-    document.querySelectorAll('[data-level]').forEach((b,i)=>{b.classList.toggle('active',i===index);b.classList.toggle('done',completion.has(i));if(i===index)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
-    status(levels[index].note);render();
+    releasePointer();current=index;world=new World(levels[index]);hint=false;finished=false;cursor=null;particles=[];accumulator=0;lastHud='';quakeStatusUntil=0;lastGateStates=[];
+    makeTextures();$('#level-number').textContent=String(index+1).padStart(2,'0');$('#level-title').textContent=levels[index].title;$('#difficulty').textContent=levels[index].difficulty;
+    $('#result').hidden=true;$('#result-stars').hidden=true;$('#hint').setAttribute('aria-pressed','false');$('#rules-budget').textContent=`本关：三星 ≤ ${world.budget.three} 沙量；二星 ≤ ${world.budget.two} 沙量。`;
+    $('#features').replaceChildren();const types=[...new Set(levels[index].groups.flatMap(g=>g.types||['glass']))];
+    for(const text of [...types.map(t=>typeLabels[t]),...levels[index].features.map(f=>features[f].join(' '))]){const s=document.createElement('span');s.textContent=text;$('#features').append(s);}
+    updateLevelGrid();status(levels[index].note);updateHud();render();
   }
-  function tone(frequency,duration=.12){if(muted)return;try{audioContext ||= new (window.AudioContext||window.webkitAudioContext)();if(audioContext.state==='suspended')audioContext.resume();const o=audioContext.createOscillator(),g=audioContext.createGain();o.type='sine';o.frequency.value=frequency;g.gain.setValueAtTime(.055,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);o.connect(g);g.connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}catch(_){}}
-  function finish(won,reason){
-    if(state!=='playing')return;state=won?'won':'lost';pointer=null;
-    if(won){completion.add(current);tone(880,.35);}
-    else tone(160,.24);
-    const last=current===levels.length-1;
-    document.querySelector('#result-symbol').textContent=won?'✦':'↻';
-    document.querySelector('#result-kicker').textContent=won?(last?'THREE LITTLE VICTORIES':'BEAUTIFULLY DONE'):'LET’S TRY AGAIN';
-    document.querySelector('#result-title').textContent=won?(last?'三段沙径，全部通关。':'每颗珠子，都到家了。'):'换一条路，再试一次。';
-    document.querySelector('#result-description').textContent=won?`已收集 ${collected} / ${total} 颗珠子。${last?'好好享受这份小小的成就感。':'慢慢来，也能刚刚好。'}`:reason;
-    document.querySelector('#result-action').innerHTML=won?(last?'从第一关再玩 <span>↻</span>':'下一关 <span>→</span>'):'重新挑战 <span>↻</span>';
-    document.querySelector('#result-replay').hidden=!won;
-    document.querySelector('#result').hidden=false;
-    document.querySelectorAll('[data-level]').forEach((b,i)=>b.classList.toggle('done',completion.has(i)));
+  function updateHud(){
+    const key=`${world.collected}:${world.terrain.units}`;if(key!==lastHud){lastHud=key;$('#collected').textContent=`${world.collected} / ${world.total}`;$('#dug-count').textContent=world.terrain.units;$('#star-budget').textContent=`三星 ≤ ${world.budget.three} · 二星 ≤ ${world.budget.two}`;const meter=$('#sand-meter');meter.max=world.budget.two;meter.low=world.budget.three;meter.high=world.budget.two;meter.optimum=0;meter.value=Math.min(world.terrain.units,world.budget.two);meter.setAttribute('aria-valuetext',`已挖 ${world.terrain.units}，三星额度 ${world.budget.three}，二星额度 ${world.budget.two}`);}
+    const q=levels[current].mechanics.quake;let text=world.started?'保留沙墙，送同色珠子回家':'按住划动，机关随第一铲开始';
+    if(q&&world.started&&world.quakeCount<q.count){const remaining=q.first+world.quakeCount*q.interval-world.time;text=remaining<=2?`⚠ 地震即将发生 · ${Math.max(0,remaining).toFixed(1)} 秒`:`下次地震 ${Math.ceil(remaining)} 秒 · 还剩 ${q.count-world.quakeCount} 次`;}
+    if(world.quakeLeft>0)text='≈ 地震中 · 珠子抖动，局部落沙';$('#board-instruction').textContent=text;
   }
-  const samples=Array.from({length:24},(_,i)=>[Math.cos(i*Math.PI/12),Math.sin(i*Math.PI/12)]);
-  function collideSoil(b){
-    for(let iteration=0;iteration<7;iteration++){
-      let nx=0,ny=0,hits=0;
-      for(const [dx,dy] of samples)if(solid(b.x+dx*b.r,b.y+dy*b.r)){nx-=dx;ny-=dy;hits++;}
-      if(!hits)break;
-      const n=Math.hypot(nx,ny);if(n<.01){b.y-=1;continue;}nx/=n;ny/=n;
-      b.x+=nx*.8;b.y+=ny*.8;
-      const vn=b.vx*nx+b.vy*ny;
-      if(vn<0){b.vx-=1.08*vn*nx;b.vy-=1.08*vn*ny;}
-      b.vx*=.985;
-    }
-    for(const rock of levels[current].rocks){
-      const dx=b.x-rock.x,dy=b.y-rock.y,rx=rock.rx+b.r,ry=rock.ry+b.r;
-      const d=Math.sqrt(dx*dx/(rx*rx)+dy*dy/(ry*ry));
-      if(d<1){const angle=Math.atan2(dy/ry,dx/rx);b.x=rock.x+Math.cos(angle)*rx;b.y=rock.y+Math.sin(angle)*ry;let nx=Math.cos(angle)/rx,ny=Math.sin(angle)/ry;const n=Math.hypot(nx,ny);nx/=n;ny/=n;const vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=1.1*vn*nx;b.vy-=1.1*vn*ny;}}
-    }
-  }
-  function physics(dt){
-    elapsed+=dt;
-    for(const b of balls){if(!b.active)continue;b.vy=Math.min(390,b.vy+740*dt);b.vx*=.999;b.x+=b.vx*dt;b.y+=b.vy*dt;collideSoil(b);}
-    for(let repeat=0;repeat<3;repeat++){
-      for(let i=0;i<balls.length;i++){const a=balls[i];if(!a.active)continue;
-        for(let j=i+1;j<balls.length;j++){const b=balls[j];if(!b.active)continue;let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=R*2)continue;if(d<.001){dx=.01;dy=.01;d=Math.hypot(dx,dy);}const nx=dx/d,ny=dy/d,overlap=(R*2-d)*.5;a.x-=nx*overlap;a.y-=ny*overlap;b.x+=nx*overlap;b.y+=ny*overlap;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-relative*.52;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny;}}
-        collideSoil(a);
-      }
-    }
-    for(const b of balls){if(!b.active)continue;if(b.y>=582){const jar=jars.find(j=>Math.abs(j.x-b.x)<44);if(!jar){finish(false,'珠子从罐子旁边漏走了。把通道的出口对准罐口吧。');return;}if(jar.color!==b.color){finish(false,`${colors[b.color].label}珠子进入了${colors[jar.color].label}罐子。试着分开不同颜色的通道。`);return;}b.active=false;jar.balls.push(b.color);jar.flash=1;collected++;document.querySelector('#collected').textContent=`${collected} / ${total}`;tone(520+jar.balls.length*35);for(let k=0;k<5;k++)particles.push({x:b.x,y:585,vx:(random()-.5)*75,vy:-random()*80,life:.6,color:colors[b.color].mid,size:2});if(collected===total){finish(true);return;}}}
+  function finish(){
+    if(finished)return;finished=true;releasePointer();const won=world.state==='won',last=current===levels.length-1;
+    if(won)best.set(current,Math.max(best.get(current)||0,world.stars));
+    $('#result-symbol').textContent=won?'':'↻';$('#result-symbol').hidden=won;$('#result-stars').hidden=!won;
+    if(won){$('#result-stars').replaceChildren();for(let i=0;i<3;i++){const star=document.createElement('span');star.textContent='★';star.className=i<world.stars?'lit':'';$('#result-stars').append(star);}$('#result-stars').setAttribute('aria-label',`${world.stars} 星，满分 3 星`);}
+    $('#result-score').hidden=!won;$('#result-score').textContent=`挖沙 ${world.terrain.units} · 三星额度 ${world.budget.three}`;
+    $('#result-kicker').textContent=won?(last?(best.size===15?'FIFTEEN LITTLE VICTORIES':'FINALE COMPLETE'):'BEAUTIFULLY DONE'):'LET’S TRY AGAIN';
+    $('#result-title').textContent=won?(last?(best.size===15?'十五段沙径，全部走过。':'终章通关，精彩收尾。'):world.stars===3?'不多不少，刚刚好。':'每颗珠子，都到家了。'):'换一条路，再试一次。';
+    $('#result-description').textContent=won?`收集 ${world.collected} / ${world.total} 颗珠子。${world.stars<3?'试试更细的铲子，少挖一些沙，挑战三星。':'这条精细的沙径，值得三颗星。'}`:world.reason;
+    $('#result-action').innerHTML=won?(last?'回到第一关 <span>↻</span>':'下一关 <span>→</span>'):'重新挑战 <span>↻</span>';
+    $('#result-replay').hidden=!won;$('#result-replay').textContent='再玩一次，挑战更少挖沙';$('#result').hidden=false;updateLevelGrid();
   }
   function marble(c,x,y,r,color,alpha=1){
     const p=colors[color];c.save();c.globalAlpha=alpha;c.shadowColor='#160d0980';c.shadowBlur=2;c.shadowOffsetY=2;
@@ -157,38 +76,52 @@
     if(jar.flash>0){ctx.globalAlpha=jar.flash*.5;ctx.strokeStyle=p.light;ctx.lineWidth=3;roundRect(ctx,x-w/2-3,y-3,w+6,h+6,13);ctx.stroke();}
     ctx.restore();
   }
-  function drawHint(){
-    ctx.save();ctx.lineWidth=2;ctx.setLineDash([5,8]);ctx.lineDashOffset=-elapsed*12;ctx.strokeStyle='#fff9e1b0';ctx.shadowColor='#614224';ctx.shadowBlur=3;
-    for(const route of levels[current].routes){ctx.beginPath();route.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();const p=route.at(-1);ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(p[0]-5,p[1]-8);ctx.lineTo(p[0],p[1]);ctx.lineTo(p[0]+5,p[1]-8);ctx.stroke();ctx.setLineDash([5,8]);}
-    ctx.restore();
+  function drawMaterial(b){
+    if(b.type==='glass')return;ctx.save();ctx.translate(b.x,b.y);ctx.strokeStyle='#fff9e9d9';ctx.lineWidth=1.25;
+    if(b.type==='heavy'){ctx.strokeStyle='#4a3b44b3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);ctx.moveTo(0,-5);ctx.lineTo(0,5);ctx.stroke();}
+    if(b.type==='rubber'){ctx.beginPath();ctx.ellipse(0,0,b.r*.80,b.r*.34,-.7,0,Math.PI*2);ctx.stroke();}
+    if(b.type==='light'){ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(3,0);ctx.lineTo(0,4);ctx.lineTo(-3,0);ctx.closePath();ctx.stroke();}ctx.restore();
   }
+  function mechanismDraw(){
+    const m=levels[current].mechanics,t=world.time;
+    for(const z of m.winds||[]){ctx.fillStyle='#d1e7ec22';ctx.fillRect(z.x,z.y,z.w,z.h);ctx.save();ctx.strokeStyle='#e9fcffc0';ctx.lineWidth=1.4;for(let i=0;i<6;i++){const x=z.x+((t*30+i*21)%z.w),y=z.y+13+i*15;ctx.beginPath();ctx.moveTo(x-8,y);ctx.lineTo(x+5,y);ctx.lineTo(x+1,y-3);ctx.moveTo(x+5,y);ctx.lineTo(x+1,y+3);ctx.stroke();}ctx.restore();}
+    for(const z of m.muds||[]){ctx.fillStyle='#73644c48';ctx.fillRect(z.x,z.y,z.w,z.h);ctx.strokeStyle='#d0b79077';ctx.lineWidth=1;for(let y=z.y+10;y<z.y+z.h;y+=13){ctx.beginPath();ctx.moveTo(z.x+6,y);ctx.bezierCurveTo(z.x+30,y-7,z.x+60,y+7,z.x+z.w-6,y);ctx.stroke();}}
+    if(m.quake){ctx.save();ctx.setLineDash([3,4]);ctx.strokeStyle=world.quakeLeft>0?'#ffdfa1':'#a97b5370';for(const p of m.quake.patches)ctx.strokeRect(p.x-2,p.y-2,p.w+4,p.h+4);ctx.restore();}
+    for(const z of m.magnets||[]){ctx.save();ctx.translate(z.x,z.y);ctx.strokeStyle='#936055';ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-7,-5);ctx.lineTo(-7,3);ctx.arc(0,3,7,Math.PI,0,true);ctx.lineTo(7,-5);ctx.stroke();ctx.strokeStyle='#f8ded0';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-7,-7);ctx.lineTo(-7,-3);ctx.moveTo(7,-7);ctx.lineTo(7,-3);ctx.stroke();ctx.strokeStyle='#ca927363';ctx.lineWidth=1;ctx.setLineDash([3,6]);ctx.beginPath();ctx.arc(0,0,20+Math.sin(t*2)*3,0,Math.PI*2);ctx.stroke();ctx.restore();}
+    for(const g of m.gates||[]){const open=world.gateOpen(g);ctx.save();ctx.strokeStyle=open?'#9bbaa2':'#c3a171';ctx.fillStyle='#564536';ctx.fillRect(g.x-4,g.y-3,7,g.h+6);ctx.fillRect(g.x+g.w-3,g.y-3,7,g.h+6);if(open){ctx.setLineDash([4,5]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(g.x,g.y+g.h/2);ctx.lineTo(g.x+g.w,g.y+g.h/2);ctx.stroke();}else{ctx.fillStyle='#8f785b';ctx.fillRect(g.x,g.y,g.w,g.h);ctx.lineWidth=1;for(let x=g.x+4;x<g.x+g.w;x+=9){ctx.beginPath();ctx.moveTo(x,g.y);ctx.lineTo(x+3,g.y+g.h);ctx.stroke();}}ctx.restore();}
+    for(const w of m.worms||[]){ctx.save();for(let i=6;i>=0;i--){const p=world.wormPoint(w,i*.13);ctx.beginPath();ctx.ellipse(p.x,p.y,6.5-i*.35,5.5-i*.2,0,0,Math.PI*2);ctx.fillStyle=i%2?'#b8796b':'#d39d88';ctx.fill();ctx.strokeStyle='#815544';ctx.lineWidth=.7;ctx.stroke();}const p=world.wormPoint(w);ctx.fillStyle='#fff3df';ctx.beginPath();ctx.arc(p.x+2,p.y-2,2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#422c20';ctx.beginPath();ctx.arc(p.x+2.6,p.y-2,1,0,Math.PI*2);ctx.fill();ctx.restore();}
+  }
+  function drawHint(){ctx.save();ctx.lineWidth=2;ctx.setLineDash([5,8]);ctx.lineDashOffset=-world.time*12;ctx.strokeStyle='#fff9e1b0';ctx.shadowColor='#614224';ctx.shadowBlur=3;for(const route of levels[current].routes){ctx.beginPath();route.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();const p=route.at(-1);ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(p[0]-5,p[1]-8);ctx.lineTo(p[0],p[1]);ctx.lineTo(p[0]+5,p[1]-8);ctx.stroke();ctx.setLineDash([5,8]);}ctx.restore();}
   function render(){
-    ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.save();ctx.shadowColor='#281a16b0';ctx.shadowBlur=7;ctx.shadowOffsetY=3;ctx.drawImage(soil,0,0);ctx.restore();
-    levels[current].rocks.forEach(rockDraw);if(hint&&state==='playing')drawHint();
-    for(const b of balls)if(b.active)marble(ctx,b.x,b.y,b.r,b.color);
-    jars.forEach(jarDraw);
-    for(const p of particles){ctx.globalAlpha=Math.max(0,p.life*1.7);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;
-    if(cursor&&state==='playing'){ctx.beginPath();ctx.arc(cursor.x,cursor.y,BRUSH,0,Math.PI*2);ctx.strokeStyle=pointer?'#fff8e790':'#fff8e75c';ctx.lineWidth=1;ctx.stroke();ctx.beginPath();ctx.arc(cursor.x,cursor.y,2,0,Math.PI*2);ctx.fillStyle='#fff9e8b0';ctx.fill();}
-    if(!dragged&&current===0&&state==='playing'&&!hint){const a=.50+Math.sin(elapsed*3)*.2;ctx.save();ctx.globalAlpha=a;ctx.strokeStyle='#fffdf4';ctx.lineWidth=2;ctx.setLineDash([3,6]);ctx.beginPath();ctx.moveTo(128,327);ctx.lineTo(129,376);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(123,367);ctx.lineTo(129,376);ctx.lineTo(135,367);ctx.stroke();ctx.restore();}
+    syncTerrain();ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.save();ctx.shadowColor='#281a16b0';ctx.shadowBlur=7;ctx.shadowOffsetY=3;ctx.drawImage(soil,0,0);ctx.restore();levels[current].rocks.forEach(rockDraw);mechanismDraw();if(hint&&world.state==='playing')drawHint();
+    for(const b of world.balls)if(b.active){marble(ctx,b.x,b.y,b.r,b.color);drawMaterial(b);}world.jars.forEach(jarDraw);
+    for(const p of particles){ctx.globalAlpha=Math.max(0,Math.min(1,p.life*1.7));ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;
+    if(cursor&&world.state==='playing'){ctx.beginPath();ctx.arc(cursor.x,cursor.y,brush,0,Math.PI*2);ctx.strokeStyle=pointer?'#fff8e7aa':'#fff8e770';ctx.lineWidth=1;ctx.stroke();ctx.beginPath();ctx.arc(cursor.x,cursor.y,2,0,Math.PI*2);ctx.fillStyle='#fff9e8c0';ctx.fill();}
+    $('#board-wrap').classList.toggle('quaking',!reducedMotion&&world.quakeLeft>0);
   }
-  function frame(time){
-    const delta=Math.min((time-lastTime)/1000||0,.05);lastTime=time;
-    if(!document.hidden){if(state==='playing'){accumulator+=delta;while(accumulator>=STEP&&state==='playing'){physics(STEP);accumulator-=STEP;}}for(const j of jars)j.flash=Math.max(0,j.flash-delta*2);for(const p of particles){p.x+=p.vx*delta;p.y+=p.vy*delta;p.vy+=150*delta;p.life-=delta;}particles=particles.filter(p=>p.life>0);render();}
-    requestAnimationFrame(frame);
+  function drainEvents(){
+    for(const e of world.events){sound.play(e.type,e.count||e.speed||0);if(e.type==='collect')for(let i=0;i<6;i++)particles.push({x:e.x,y:583,vx:(random()-.5)*80,vy:-random()*80,life:.6,color:colors[e.color].mid,size:2});if(e.type==='quake'){status('地震来了：看看虚线框附近，必要时补挖一点沙。');quakeStatusUntil=world.time+2;for(const p of levels[current].mechanics.quake.patches)for(let i=0;i<12;i++)particles.push({x:p.x+random()*p.w,y:p.y,vx:(random()-.5)*35,vy:random()*60,life:1,color:'#d4bf99',size:2});}}
+    world.events.length=0;
+    (levels[current].mechanics.gates||[]).forEach((g,i)=>{const open=world.gateOpen(g);if(lastGateStates[i]!==undefined&&lastGateStates[i]!==open)sound.play('gate');lastGateStates[i]=open;});
+    if(world.started&&levels[current].mechanics.worms)sound.play('worm');if(quakeStatusUntil&&world.time>quakeStatusUntil){status(levels[current].note);quakeStatusUntil=0;}
+    if(world.state!=='playing')finish();
   }
-  function position(event){const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)*W/rect.width,y:(event.clientY-rect.top)*H/rect.height};}
-  canvas.addEventListener('pointerdown',e=>{if(state!=='playing'||(e.pointerType==='mouse'&&e.button!==0)||pointer)return;e.preventDefault();pointer={...position(e),id:e.pointerId};cursor=pointer;canvas.setPointerCapture(e.pointerId);carve(pointer.x,pointer.y,BRUSH,true);dragged=true;document.querySelector('#board-instruction').textContent='让每种颜色，沿着自己的路';});
-  canvas.addEventListener('pointermove',e=>{const p=position(e);cursor=p;if(pointer&&pointer.id===e.pointerId){carveLine([pointer.x,pointer.y],[p.x,p.y],BRUSH,true);pointer={...p,id:e.pointerId};} });
-  function release(e){if(pointer?.id===e.pointerId){pointer=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);}if(e.pointerType!=='mouse')cursor=null;}
-  canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',()=>pointer=null);canvas.addEventListener('pointerleave',()=>{if(!pointer)cursor=null;});
-  document.querySelector('#restart').addEventListener('click',()=>load(current));
-  document.querySelector('#hint').addEventListener('click',()=>{hint=!hint;document.querySelector('#hint').setAttribute('aria-pressed',String(hint));status(hint?'沿虚线慢慢挖，记得把通道一直连到罐口。':levels[current].note);});
-  document.querySelectorAll('[data-level]').forEach(b=>b.addEventListener('click',()=>load(Number(b.dataset.level))));
-  document.querySelector('#result-action').addEventListener('click',()=>load(state==='won'?(current+1)%levels.length:current));
-  document.querySelector('#result-replay').addEventListener('click',()=>load(current));
-  document.querySelector('#sound').addEventListener('click',()=>{muted=!muted;const label=muted?'开启音效':'关闭音效';document.querySelector('#sound').setAttribute('aria-label',label);document.querySelector('#sound').title=label;document.querySelector('#sound-waves').setAttribute('d',muted?'m16 9 5 6m0-6-5 6':'M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14');tone(660);});
-  document.addEventListener('visibilitychange',()=>{lastTime=performance.now();accumulator=0;pointer=null;});
-  // Read-only diagnostics for reproducible browser verification; play still uses pointer events.
-  window.sandGame = Object.freeze({ snapshot:()=>({level:current+1,state,collected,total,balls:balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),color:b.color})),jars:jars.map(j=>({color:j.color,count:j.balls.length})),hint}), routes:()=>structuredClone(levels[current].routes) });
+  function frame(time){const delta=Math.min((time-lastTime)/1000||0,.05);lastTime=time;const paused=document.hidden||$('#level-dialog').open||$('#rules-dialog').open;
+    if(!paused){if(world.state==='playing'){accumulator+=delta;while(accumulator>=STEP&&world.state==='playing'){world.step(STEP);accumulator-=STEP;}drainEvents();}for(const p of particles){p.x+=p.vx*delta;p.y+=p.vy*delta;p.vy+=150*delta;p.life-=delta;}particles=particles.filter(p=>p.life>0);updateHud();render();}else accumulator=0;requestAnimationFrame(frame);
+  }
+  function position(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+  function dig(a,b){const removed=world.dig([a.x,a.y],[b.x,b.y],brush);if(removed){sound.play('dig');for(let i=0;i<3;i++)particles.push({x:b.x+(random()-.5)*brush,y:b.y,vx:(random()-.5)*70,vy:random()*60,life:.35+random()*.25,color:'#d2bfa1',size:1+random()*2});}}
+  function releasePointer(){if(pointer&&canvas.hasPointerCapture(pointer.id))canvas.releasePointerCapture(pointer.id);pointer=null;}
+  canvas.addEventListener('pointerdown',e=>{if(world.state!=='playing'||pointer||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();pointer={...position(e),id:e.pointerId};cursor=pointer;canvas.setPointerCapture(e.pointerId);dig(pointer,pointer);});
+  canvas.addEventListener('pointermove',e=>{const p=position(e);cursor=p;if(pointer?.id===e.pointerId){dig(pointer,p);pointer={...p,id:e.pointerId};}});
+  for(const event of ['pointerup','pointercancel'])canvas.addEventListener(event,e=>{if(pointer?.id===e.pointerId)releasePointer();if(e.pointerType!=='mouse')cursor=null;});canvas.addEventListener('lostpointercapture',()=>pointer=null);canvas.addEventListener('pointerleave',()=>{if(!pointer)cursor=null;});
+  $('#restart').addEventListener('click',()=>load(current));$('#hint').addEventListener('click',()=>{hint=!hint;$('#hint').setAttribute('aria-pressed',String(hint));status(hint?'沿虚线从罐口往上挖，再接通珠子；提示不扣星。':levels[current].note);});
+  $('#result-action').addEventListener('click',()=>load(world.state==='won'?(current+1)%levels.length:current));$('#result-replay').addEventListener('click',()=>load(current));
+  $('#choose-level').addEventListener('click',()=>{releasePointer();updateLevelGrid();$('#level-dialog').showModal();});$('#rules').addEventListener('click',()=>{releasePointer();$('#rules-dialog').showModal();});
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.close).close()));
+  document.querySelectorAll('[data-brush]').forEach(b=>b.addEventListener('click',()=>{brush=Number(b.dataset.brush);document.querySelectorAll('[data-brush]').forEach(btn=>{const active=Number(btn.dataset.brush)===brush;btn.classList.toggle('selected',active);btn.setAttribute('aria-pressed',String(active));});}));
+  $('#sound').addEventListener('click',async()=>{const button=$('#sound');button.disabled=true;try{const on=await sound.toggle();button.setAttribute('aria-label',on?'关闭音效':'开启音效');button.setAttribute('aria-pressed',String(on));button.title=on?'关闭音效':'开启音效';$('#sound-label').textContent=on?'音效 开':'音效 关';$('#sound-waves').setAttribute('d',on?'M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14':'m16 9 5 6m0-6-5 6');}catch(e){status(e.message);}finally{button.disabled=false;}});
+  document.addEventListener('visibilitychange',()=>{lastTime=performance.now();accumulator=0;releasePointer();});
+  window.sandGame=Object.freeze({snapshot:()=>({level:current+1,...world.snapshot(),hint,brush,soundEnabled:sound.enabled,audioPlayed:sound.played,best:[...best]}),routes:()=>structuredClone(levels[current].routes),levels:()=>levels.map(l=>({id:l.id,title:l.title,features:[...l.features]}))});
   load(0);requestAnimationFrame(frame);
 })();

@@ -10,10 +10,13 @@
 ```text
 index.html             # 游戏入口主页
 home.css               # 主页样式
-sand-marbles/          # 沙里有珠：三个关卡的挖沙落珠游戏
+sand-marbles/          # 沙里有珠：15 个关卡的挖沙落珠游戏
   index.html
   style.css
   game.js
+  core.js              # 地形、物理和星级
+  levels.js            # 15 关与参考解法
+  audio.js             # 本地合成音效
   cover.png
   README.md
 ```
