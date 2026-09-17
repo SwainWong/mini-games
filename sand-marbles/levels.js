@@ -1,4 +1,4 @@
-/* Fifteen individually composed maps. Solutions live only in test fixtures. */
+/* Fifteen composed maps. Solutions live only in test fixtures. */
 (function(root,factory){const levels=factory();if(typeof module==='object')module.exports=levels;else root.SandLevels=levels;})(globalThis,()=>([
   {
     "id": 1,
@@ -35,7 +35,7 @@
   {
     "id": 2,
     "title": "高低两路",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "初识沙径",
     "difficulty": "入门",
     "jars": [
@@ -79,7 +79,7 @@
     "tunnels": [],
     "mechanics": {
       "rival": {
-        "speed": 10
+        "speed": 22
       }
     },
     "features": [
@@ -93,7 +93,7 @@
   {
     "id": 3,
     "title": "双泉汇流",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -140,7 +140,7 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 10
+        "speed": 22
       }
     },
     "features": [
@@ -155,7 +155,7 @@
   {
     "id": 4,
     "title": "石岛回廊",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -202,7 +202,7 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 10
+        "speed": 22
       }
     },
     "features": [
@@ -217,7 +217,7 @@
   {
     "id": 5,
     "title": "两岸连桥",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -265,15 +265,24 @@
       "porter": true,
       "worms": [
         {
-          "x": 220,
-          "y": 395,
-          "range": 30,
-          "depth": 20,
-          "speed": 0.62
+          "x": 300,
+          "y": 465,
+          "range": 48,
+          "depth": 25,
+          "speed": 41,
+          "angle": 0.45
+        },
+        {
+          "x": 355,
+          "y": 490,
+          "range": 48,
+          "depth": 33,
+          "speed": 47,
+          "angle": 2.7
         }
       ],
       "rival": {
-        "speed": 10
+        "speed": 22
       }
     },
     "features": [
@@ -289,12 +298,12 @@
   {
     "id": 6,
     "title": "三层峡谷",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
       {
-        "x": 95,
+        "x": 104,
         "color": "amber"
       },
       {
@@ -302,7 +311,7 @@
         "color": "jade"
       },
       {
-        "x": 465,
+        "x": 456,
         "color": "blue"
       }
     ],
@@ -350,12 +359,31 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 11
-      }
+        "speed": 25
+      },
+      "worms": [
+        {
+          "x": 225,
+          "y": 400,
+          "range": 48,
+          "depth": 25,
+          "speed": 42,
+          "angle": 0.45
+        },
+        {
+          "x": 450,
+          "y": 390,
+          "range": 48,
+          "depth": 33,
+          "speed": 48,
+          "angle": 2.7
+        }
+      ]
     },
     "features": [
       "porter",
-      "rival"
+      "rival",
+      "worm"
     ],
     "budget": {
       "three": 560,
@@ -365,7 +393,7 @@
   {
     "id": 7,
     "title": "回旋长廊",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -415,15 +443,24 @@
       "porter": true,
       "worms": [
         {
-          "x": 220,
-          "y": 410,
-          "range": 35,
-          "depth": 20,
-          "speed": 0.62
+          "x": 205,
+          "y": 350,
+          "range": 48,
+          "depth": 25,
+          "speed": 43,
+          "angle": 0.45
+        },
+        {
+          "x": 280,
+          "y": 440,
+          "range": 48,
+          "depth": 33,
+          "speed": 49,
+          "angle": 2.7
         }
       ],
       "rival": {
-        "speed": 11
+        "speed": 25
       }
     },
     "features": [
@@ -439,7 +476,7 @@
   {
     "id": 8,
     "title": "斜切双谷",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -486,12 +523,31 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 11
-      }
+        "speed": 25
+      },
+      "worms": [
+        {
+          "x": 250,
+          "y": 350,
+          "range": 48,
+          "depth": 25,
+          "speed": 44,
+          "angle": 0.45
+        },
+        {
+          "x": 440,
+          "y": 345,
+          "range": 48,
+          "depth": 33,
+          "speed": 50,
+          "angle": 2.7
+        }
+      ]
     },
     "features": [
       "porter",
-      "rival"
+      "rival",
+      "worm"
     ],
     "budget": {
       "three": 466,
@@ -501,24 +557,24 @@
   {
     "id": 9,
     "title": "四叶错层",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
       {
-        "x": 70,
+        "x": 104,
         "color": "amber"
       },
       {
-        "x": 210,
+        "x": 221,
         "color": "jade"
       },
       {
-        "x": 350,
+        "x": 338,
         "color": "blue"
       },
       {
-        "x": 490,
+        "x": 456,
         "color": "rose"
       }
     ],
@@ -569,12 +625,31 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 11
-      }
+        "speed": 25
+      },
+      "worms": [
+        {
+          "x": 220,
+          "y": 250,
+          "range": 48,
+          "depth": 25,
+          "speed": 45,
+          "angle": 0.45
+        },
+        {
+          "x": 460,
+          "y": 305,
+          "range": 48,
+          "depth": 33,
+          "speed": 51,
+          "angle": 2.7
+        }
+      ]
     },
     "features": [
       "porter",
-      "rival"
+      "rival",
+      "worm"
     ],
     "budget": {
       "three": 715,
@@ -584,7 +659,7 @@
   {
     "id": 10,
     "title": "断崖双泉",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -655,12 +730,40 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 11
-      }
+        "speed": 25
+      },
+      "worms": [
+        {
+          "x": 210,
+          "y": 430,
+          "range": 60,
+          "depth": 25,
+          "speed": 46,
+          "angle": 0.45
+        },
+        {
+          "x": 255,
+          "y": 515,
+          "range": 60,
+          "depth": 18,
+          "speed": 52,
+          "angle": 2.7
+        },
+        {
+          "x": 260,
+          "y": 110,
+          "range": 60,
+          "depth": 25,
+          "speed": 46,
+          "angle": 0.45
+        }
+      ],
+      "porterRange": 65
     },
     "features": [
       "porter",
-      "rival"
+      "rival",
+      "worm"
     ],
     "budget": {
       "three": 545,
@@ -670,12 +773,12 @@
   {
     "id": 11,
     "title": "窄门分家",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
       {
-        "x": 100,
+        "x": 104,
         "color": "amber"
       },
       {
@@ -683,7 +786,7 @@
         "color": "jade"
       },
       {
-        "x": 470,
+        "x": 456,
         "color": "blue"
       }
     ],
@@ -741,15 +844,32 @@
       "porter": true,
       "worms": [
         {
-          "x": 255,
-          "y": 400,
-          "range": 38,
-          "depth": 20,
-          "speed": 0.62
+          "x": 130,
+          "y": 385,
+          "range": 60,
+          "depth": 25,
+          "speed": 47,
+          "angle": 0.45
+        },
+        {
+          "x": 250,
+          "y": 430,
+          "range": 60,
+          "depth": 33,
+          "speed": 53,
+          "angle": 2.7
+        },
+        {
+          "x": 470,
+          "y": 300,
+          "range": 60,
+          "depth": 25,
+          "speed": 47,
+          "angle": 0.45
         }
       ],
       "rival": {
-        "speed": 12
+        "speed": 28
       }
     },
     "features": [
@@ -765,12 +885,12 @@
   {
     "id": 12,
     "title": "倒挂花园",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
       {
-        "x": 100,
+        "x": 104,
         "color": "amber"
       },
       {
@@ -778,7 +898,7 @@
         "color": "jade"
       },
       {
-        "x": 465,
+        "x": 456,
         "color": "blue"
       }
     ],
@@ -840,12 +960,39 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 12
-      }
+        "speed": 28
+      },
+      "worms": [
+        {
+          "x": 245,
+          "y": 380,
+          "range": 60,
+          "depth": 25,
+          "speed": 48,
+          "angle": 0.45
+        },
+        {
+          "x": 435,
+          "y": 355,
+          "range": 60,
+          "depth": 33,
+          "speed": 54,
+          "angle": 2.7
+        },
+        {
+          "x": 340,
+          "y": 210,
+          "range": 60,
+          "depth": 25,
+          "speed": 48,
+          "angle": 0.45
+        }
+      ]
     },
     "features": [
       "porter",
-      "rival"
+      "rival",
+      "worm"
     ],
     "budget": {
       "three": 657,
@@ -855,7 +1002,7 @@
   {
     "id": 13,
     "title": "地下回字湾",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -907,15 +1054,40 @@
       "porter": true,
       "worms": [
         {
-          "x": 235,
-          "y": 405,
-          "range": 22,
-          "depth": 12,
-          "speed": 0.62
+          "x": 210,
+          "y": 360,
+          "range": 60,
+          "depth": 25,
+          "speed": 49,
+          "angle": 0.45
+        },
+        {
+          "x": 315,
+          "y": 490,
+          "range": 60,
+          "depth": 33,
+          "speed": 55,
+          "angle": 2.7
+        },
+        {
+          "x": 120,
+          "y": 330,
+          "range": 60,
+          "depth": 25,
+          "speed": 49,
+          "angle": 0.45
+        },
+        {
+          "x": 410,
+          "y": 475,
+          "range": 60,
+          "depth": 33,
+          "speed": 55,
+          "angle": 2.7
         }
       ],
       "rival": {
-        "speed": 12
+        "speed": 28
       }
     },
     "features": [
@@ -931,24 +1103,24 @@
   {
     "id": 14,
     "title": "彩珠织巢",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
       {
-        "x": 70,
+        "x": 104,
         "color": "amber"
       },
       {
-        "x": 210,
+        "x": 221,
         "color": "jade"
       },
       {
-        "x": 350,
+        "x": 338,
         "color": "blue"
       },
       {
-        "x": 490,
+        "x": 456,
         "color": "rose"
       }
     ],
@@ -1026,12 +1198,47 @@
     "mechanics": {
       "porter": true,
       "rival": {
-        "speed": 12
-      }
+        "speed": 28
+      },
+      "worms": [
+        {
+          "x": 145,
+          "y": 420,
+          "range": 60,
+          "depth": 25,
+          "speed": 50,
+          "angle": 0.45
+        },
+        {
+          "x": 425,
+          "y": 420,
+          "range": 60,
+          "depth": 33,
+          "speed": 56,
+          "angle": 2.7
+        },
+        {
+          "x": 80,
+          "y": 275,
+          "range": 60,
+          "depth": 25,
+          "speed": 50,
+          "angle": 0.45
+        },
+        {
+          "x": 440,
+          "y": 220,
+          "range": 60,
+          "depth": 33,
+          "speed": 56,
+          "angle": 2.7
+        }
+      ]
     },
     "features": [
       "porter",
-      "rival"
+      "rival",
+      "worm"
     ],
     "budget": {
       "three": 805,
@@ -1041,24 +1248,24 @@
   {
     "id": 15,
     "title": "搬运大乱斗",
-    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
+    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
       {
-        "x": 75,
+        "x": 104,
         "color": "amber"
       },
       {
-        "x": 210,
+        "x": 221,
         "color": "jade"
       },
       {
-        "x": 350,
+        "x": 338,
         "color": "blue"
       },
       {
-        "x": 485,
+        "x": 456,
         "color": "rose"
       }
     ],
@@ -1155,22 +1362,40 @@
       "porter": true,
       "worms": [
         {
-          "x": 145,
-          "y": 398,
-          "range": 23,
+          "x": 130,
+          "y": 435,
+          "range": 60,
           "depth": 25,
-          "speed": 0.62
+          "speed": 51,
+          "angle": 0.45
         },
         {
           "x": 405,
-          "y": 420,
-          "range": 18,
-          "depth": 20,
-          "speed": 0.62
+          "y": 415,
+          "range": 60,
+          "depth": 33,
+          "speed": 57,
+          "angle": 2.7
+        },
+        {
+          "x": 85,
+          "y": 255,
+          "range": 60,
+          "depth": 25,
+          "speed": 51,
+          "angle": 0.45
+        },
+        {
+          "x": 460,
+          "y": 255,
+          "range": 60,
+          "depth": 33,
+          "speed": 57,
+          "angle": 2.7
         }
       ],
       "rival": {
-        "speed": 12
+        "speed": 28
       }
     },
     "features": [
