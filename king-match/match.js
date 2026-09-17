@@ -65,5 +65,39 @@ function plan(board,maxDepth=8,width=100){
  }
  return null;
 }
-const api={matches,preview,legal,paint,rng,gravity,resolve,routeCost,plan};if(typeof module!=='undefined')module.exports=api;else root.KingMatch=api;
+function remaining(board){return board.reduce((n,v)=>n+(v!=null&&v>=0?1:0),0);}
+const clearCache=new Map();
+const boardKey=b=>b.map(v=>v==null?'.':v).join('');
+function remember(board,path){let b=[...board];const entries=[];for(let i=0;i<path.length;i++){entries.push([boardKey(b),path.slice(i)]);const [a,c]=path[i],r=resolve(b,a,c);if(!r)throw Error('Invalid full-clear witness');b=r.board;}if(remaining(b))throw Error('Full-clear witness left gems');for(const [key,value]of entries)clearCache.set(key,value);}
+function solveClear(board,budget=6000){
+ const cached=clearCache.get(boardKey(board));if(cached){let b=[...board];for(const [a,c]of cached)b=resolve(b,a,c).board;return{board:b,path:cached};}
+ const seen=new Set();let nodes=0;
+ function visit(b,path){
+  if(!remaining(b))return {board:b,path};
+  if(++nodes>budget)return null;
+  const counts=[0,0,0,0];for(const v of b)if(v!=null&&v>=0)counts[v]++;
+  if(counts.some(n=>n>0&&n<3))return null;
+  const key=b.map(v=>v==null?'.':v).join('');if(seen.has(key))return null;seen.add(key);
+  const choices=legal(b).map(m=>({m,result:resolve(b,m.a,m.b)})).sort((a,c)=>remaining(a.result.board)-remaining(c.result.board));
+  for(const {m,result}of choices){const solution=visit(result.board,[...path,[m.a,m.b]]);if(solution)return solution;if(nodes>budget)break;}return null;
+ }const result=visit([...board],[]);if(result)remember(board,result.path);return result;
+}
+function modulePaint(mask,seed){
+ const random=rng(seed),b=[...mask];
+ for(let c=0;c<8;c+=2){let rows=[];const fill=()=>{
+   const n=rows.length;if(!n)return true;if(![3,4,6,7].includes(n))return false;
+   const chunks=n===7?(random()<.5?[3,4]:[4,3]):n===6?[3,3]:[n];let offset=0;
+   for(const count of chunks){const a=Math.floor(random()*4),z=(a+1+Math.floor(random()*3))%4,k=1+Math.floor(random()*(count-2));
+    for(let j=0;j<count;j++){const r=rows[offset+j],flip=j===k;b[r*8+c]=flip?z:a;b[r*8+c+1]=flip?a:z;}offset+=count;
+   }rows=[];return true;
+  };
+  for(let r=0;r<7;r++){const a=mask[r*8+c],z=mask[r*8+c+1];if((a!=null&&a>=0)!==(z!=null&&z>=0))return null;if(a!=null&&a>=0)rows.push(r);else if(!fill())return null;}if(!fill())return null;
+ }return matches(b).length?null:b;
+}
+function paintSolvable(mask,seed){
+ // A bounded search is not a proof of impossibility. Callers retain the board
+ // and the player's charge when no verified full-clear witness was found.
+ for(let attempt=0;attempt<16;attempt++){const b=attempt<12?modulePaint(mask,seed+attempt*7919):paint(mask,seed+attempt*7919);if(!b)continue;const witness=solveClear(b,1200);if(witness)return{board:b,path:witness.path};}return null;
+}
+const api={matches,preview,legal,paint,rng,gravity,resolve,routeCost,plan,remaining,solveClear,paintSolvable,modulePaint,remember};if(typeof module!=='undefined')module.exports=api;else root.KingMatch=api;
 })(globalThis);

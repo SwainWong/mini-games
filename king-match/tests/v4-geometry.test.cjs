@@ -1,0 +1,5 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),G=require('../geometry.js');
+test('solid ramp includes thickness and end caps',()=>{for(const p of [{x:340,y:233,r:7},{x:366,y:240,r:7},{x:300,y:221,r:7}]){assert.ok(G.contact(p,G.RAMP).depth>0);G.project(p,G.RAMP);assert.ok(G.contact(p,G.RAMP).depth<.0001);}});
+test('adjacent bricks resolve as a union, never into neighboring brick',()=>{const boxes=[{x:0,y:0,w:48,h:48},{x:48,y:0,w:48,h:48},{x:0,y:48,w:48,h:48},{x:48,y:48,w:48,h:48}];for(const q of [{x:47,y:47,r:7},{x:45,y:12,r:7},{x:52,y:51,r:7}]){G.rectUnion(q,boxes);assert.ok(boxes.every(b=>G.boxDepth(q,b)<.0001));}});
+
+test('platform and falling brick corner use nearby diagonal free space, not far side',()=>{const p={x:270.9,y:405.04,r:7.06,px:271.06,py:405.06,vx:0,vy:30},boxes=[{x:24,y:378,w:268,h:20},{x:216,y:405.628,w:48,h:48}];G.rectUnion(p,boxes,24,408);assert.ok(boxes.every(b=>G.boxDepth(p,b)<.00001));assert.ok(Math.hypot(p.x-270.9,p.y-405.04)<.3);});

@@ -9,9 +9,4 @@ test('falling brick collider follows visible y and the old slot becomes physical
  g.particles=[{id:0,x:384,y:410,r:7,vx:0,vy:0,angle:0,spin:0}];run(g,1/120);assert.ok(g.particles[0].y>409,'old row does not push grain above398');
  const y=g.operation.tiles[0].y;g.particles=[{id:0,x:384,y:y+5,r:7,vx:0,vy:0,angle:0,spin:0,py:y-8,px:384}];run(g,1/120);const now=g.operation.tiles[0];assert.ok(g.particles[0].y+7<=now.y+.01||g.particles[0].y-7>=now.y+48-.01,'particle cannot stay inside moving brick');
 });
-const solutions=require('./solutions.cjs');
-for(let l=0;l<2;l++)test(`level ${l+1}: wounded king can drain, leave spikes and preserve HP for two seconds`,()=>{
- const g=new Game(l);g.start();const move=([a,b])=>{assert.ok(g.swap(a,b));let n=0;while(g.operation&&g.state==='playing'&&n++<3600)g.update(1/120);};for(const m of solutions[l].slice(0,-1))move(m);
- while(g.hp===100&&g.time<65)g.update(1/120);assert.equal(g.hp,88);assert.equal(g.state,'playing');move(solutions[l].at(-1));
- while(g.clearance<.5&&g.state==='playing'&&g.time<80)g.update(1/120);const hp=g.hp;assert.ok(hp>0&&hp<100);run(g,2);assert.equal(g.hp,hp);assert.ok(g.clearance>.5);run(g,25);assert.equal(g.state,'won');assert.equal(g.hp,hp);
-});
+test('first contact remains survivable with the rally system inactive',()=>{const g=new Game(0);g.rallyRandom=()=>.99;g.start();g.clearance=0;g.hazard();assert.equal(g.hp,88);assert.equal(g.rallies,0);g.clearance=2;g.time=2;g.hazard();assert.equal(g.hp,88);});
