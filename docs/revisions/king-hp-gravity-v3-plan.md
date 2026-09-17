@@ -38,6 +38,6 @@ Files: `king-match/renderer.js`, `king-match/game.js`, `king-match/index.html`, 
 
 ## Task 4：制作人复审与发布
 Files: `docs/revisions/king-hp-gravity-v3-review.md`, `king-match/README.md`, `index.html`。
-- [ ] 制作人先独立盲玩，不提前给解法；处理所有阻塞意见并复测，新评分不沿用v2。
-- [ ] 运行两游戏所需回归和diff检查；确认main最新改动已保留；获得制作人发布批准。
+- [x] 制作人先独立盲玩，不提前给解法；处理所有阻塞意见并复测，新评分不沿用v2。
+- [x] 运行两游戏所需回归和diff检查；确认main最新改动已保留；获得制作人发布批准。
 - [ ] 提交并更新既有免费Pages；确认build对应提交、资产hash、线上两关实际输入与合集返回；最终给真实上线链接和新版验收结果。
