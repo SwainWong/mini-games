@@ -29,7 +29,7 @@ node --test king-match/tests/*.test.cjs
 node --test sand-marbles/tests/*.test.cjs
 ```
 
-`tests/browser-check.js` 是 Playwright 真实鼠标/触摸回归函数。制作人独立试玩记录在 `docs/revisions/v4-review.md`。开发截图和测试输出只写入忽略的 `output/`。
+`tests/browser-check.js` 是 Playwright 真实鼠标/触摸回归函数。制作人独立试玩记录在 `docs/revisions/v4-review.md`。斜坡出口及砖角自然下落的 v5 专项评审见 `docs/revisions/v5-review.md`，验证见 `docs/revisions/v5-validation.md`。开发截图和测试输出只写入忽略的 `output/`。
 
 ## 实现边界
 

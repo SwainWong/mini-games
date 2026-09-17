@@ -22,7 +22,7 @@ function rect(p,x,y,w,h){
 }
 function collideWorld(g,p){
   if(p.x-p.r<24)surface(p,1,0,24-(p.x-p.r));if(p.x+p.r>408)surface(p,-1,0,p.x+p.r-408);
-  if(p.x+p.r>=24&&p.x-p.r<=366&&p.y+p.r>=150&&p.y-p.r<=248)G.project(p,G.RAMP);
+  if(G.nearRamp(p))G.project(p,G.RAMP);
   rect(p,24,378,268,20);
   const penetration=g.shield.x-(p.x-p.r);
   if(p.y>231&&p.y<378&&p.x>=g.shield.x-1&&penetration>0){
@@ -32,10 +32,10 @@ function collideWorld(g,p){
   rect(p,g.shield.x-12,221,12,157);
   // The visible roof, shield and platform enclose the king's protected cavity.
   // Resolve at the entry surface, never allow dense grains behind the shield.
-  const roof=150+(p.x-24)*82/342;
+  const roof=G.rampTop(p.x);
   if(p.x<g.shield.x&&p.y>roof-p.r&&p.y<398){
    if(p.px>=g.shield.x-p.r-1&&p.py>220)surface(p,1,0,g.shield.x+p.r-p.x);
-   else surface(p,82/Math.hypot(342,82),-342/Math.hypot(342,82),(p.y-roof+p.r)*342/Math.hypot(342,82));
+   else surface(p,G.ROOF_NORMAL.x,G.ROOF_NORMAL.y,(p.y-roof+p.r)*-G.ROOF_NORMAL.y);
   }
   if(g.level.beam)rect(p,G.BEAM.x,G.BEAM.y,G.BEAM.w,G.BEAM.h);
   if(g.operation?.kind==='fall'){
@@ -66,8 +66,8 @@ class Game{
  constructor(index=0,options={}){
   this.levelIndex=index;this.level=L.levels[index];if(this.level.solution)M.remember(this.level.board,this.level.solution);this.board=[...this.level.board];this.state='ready';this.reason='';this.time=0;this.accumulator=0;this.collected=0;this.actions=0;this.operation=null;this.events=[];this.particles=[];this.cleared=0;this.random=random(this.level.seed);this.sourceEnabled=true;this.spawnClock=0;this.queued=0;this.supplied=0;this.spawned=0;this.contact=0;this.contactForce=0;this.normalImpulse=0;this.compression=0;this.shield={x:this.level.shieldStart,vx:0,mass:20,damping:22,resistance:this.level.resistance||95};this.clearance=this.shield.x-BODY_WIDTH-SPIKE_X;this.safeTime=0;this.remixes=2;this.hp=100;this.maxHp=100;this.hits=0;this.nextDamageAt=0;this.chain=0;this.initialGems=M.remaining(this.board);this.rallies=0;this.rallyUntil=0;this.rallyCooldown=0;this.lastHurt=-10;this.walkTime=0;this.rallySeed=options.rallySeed??Math.floor(Math.random()*4294967296);this.rallyRandom=random(this.rallySeed);
   for(let row=0,y=9;y<390;y+=12.8,row++)for(let x=32+(row%2)*7.4;x<401;x+=14.8){
-   const roof=150+(Math.min(x,366)-24)*82/342;
-   if(x>374||y<roof-8||x>this.shield.x+8&&y>roof+24)this.addParticle(x,y);
+   const roof=G.rampTop(Math.min(x,G.RAMP_BOUNDS.maxX));
+   if(x>G.RAMP_BOUNDS.maxX+8||y<roof-8||x>this.shield.x+8&&y>roof+24)this.addParticle(x,y);
   }
   this.supplied=this.spawned;this.initialStock=this.spawned;this.initialUpper=this.particles.filter(p=>p.y<150).length;
  }
@@ -94,8 +94,15 @@ class Game{
     }
     t.y+=advance;
    }
+   const supports=contacts.length?this.boxes():[];
    for(const {t,p} of contacts){let left=t.x,right=t.x+48;for(let n=0;n<moving.length;n++)for(const q of moving)if(Math.abs(before.get(q)-before.get(t))<.1&&q.x<=right&&q.x+48>=left){left=Math.min(left,q.x);right=Math.max(right,q.x+48);}
-    const dl=left-p.r-24<0?Infinity:p.x-left,dr=right+p.r>408?Infinity:right-p.x,dir=dl<dr?-1:1;
+    const dl=left-p.r-24<0?Infinity:p.x-left,dr=right+p.r>408?Infinity:right-p.x;let dir=dl<dr?-1:1;
+    // Test local downward clearance before choosing a rolling force. Near a
+    // neighboring brick corner the open route can be inside this same column,
+    // even when the wall prevents leaving the column on that side.
+    const blocked=dx=>{const q={x:p.x+dx,y:p.y+4,r:p.r};return Math.max(0,24-q.x+q.r,q.x+q.r-408)+supports.reduce((sum,b)=>sum+G.boxDepth(q,b),0);};
+    const down=blocked(0),a=blocked(-2),b=blocked(2);
+    if(down<.00001)dir=0;else if(Math.abs(a-b)>.00001)dir=a<b?-1:1;
     p.vx=Math.max(-350,Math.min(350,p.vx+dir*4800*DT));
    }
    const done=op.tiles.every(t=>t.y>=t.targetY-.0001),progress=op.tiles.reduce((sum,t)=>sum+t.y-t.startY,0);
@@ -179,10 +186,10 @@ class Game{
   for(const p of this.particles){
    // The moving shield has advanced since the contact-force solve. Resolve its
    // new boundary and any connected brick seam before exposing the next frame.
-   for(let pass=0;pass<2;pass++){G.rectUnion(p,boxes,24,408);if(p.x+p.r>=24&&p.x-p.r<=366&&p.y+p.r>=150&&p.y-p.r<=248)G.project(p,G.RAMP);}
+   for(let pass=0;pass<2;pass++){G.rectUnion(p,boxes,24,408);if(G.nearRamp(p))G.project(p,G.RAMP);}
   }
  }
- overlap(){const boxes=this.boxes();let maximum=0;for(const p of this.particles){for(const b of boxes)maximum=Math.max(maximum,G.boxDepth(p,b));if(p.x+p.r>=24&&p.x-p.r<=366&&p.y+p.r>=150&&p.y-p.r<=248)maximum=Math.max(maximum,G.contact(p,G.RAMP).depth);}return maximum;}
+ overlap(){const boxes=this.boxes();let maximum=0;for(const p of this.particles){for(const b of boxes)maximum=Math.max(maximum,G.boxDepth(p,b));if(G.nearRamp(p))maximum=Math.max(maximum,G.contact(p,G.RAMP).depth);}return maximum;}
  pose(){if(this.time<this.rallyUntil)return this.rallyUntil-this.time>1.95?6:7;if(this.time-this.lastHurt<.5)return 5;if(this.state==='playing'&&Math.abs(this.shield.vx)>.1)return 1+Math.floor(this.walkTime*6)%4;return 0;}
  snapshot(){return{level:this.levelIndex+1,state:this.state,hp:this.hp,maxHp:this.maxHp,hits:this.hits,remaining:M.remaining(this.board),initialGems:this.initialGems,rallyActive:this.time<this.rallyUntil,rallyRemaining:Math.max(0,this.rallyUntil-this.time),rallies:this.rallies,rallySeed:this.rallySeed,pose:this.pose(),stockFill:+(this.particles.filter(p=>p.y<150).length/this.initialUpper).toFixed(3),reason:this.reason,actions:this.actions,collected:this.collected,target:this.level.target,time:+this.time.toFixed(3),spawned:this.spawned,supplied:this.supplied,queued:this.queued,active:this.particles.length,valve:this.sourceEnabled,contact:this.contact,contactForce:+this.contactForce.toFixed(3),shield:{x:+this.shield.x.toFixed(3),velocity:+this.shield.vx.toFixed(3)},clearance:+this.clearance.toFixed(3),safeTime:+this.safeTime.toFixed(3),board:[...this.board],falling:this.operation?.kind==='fall'?this.operation.tiles.map(p=>({from:p.from,to:p.to,y:+p.y.toFixed(2),targetY:p.targetY})):[],phase:this.operation?{kind:this.operation.kind,valid:this.operation.valid,age:+(this.time-this.operation.started).toFixed(3),blasted:this.operation.blasted,matched:[...this.operation.matched]}:null,remixes:this.remixes,stars:this.state==='won'?(this.actions<=this.level.par?3:this.actions<=this.level.par+3?2:1):0};}
 }

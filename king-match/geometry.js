@@ -1,6 +1,11 @@
 (function(root){
 'use strict';
-const RAMP=[[24,150],[366,232],[366,248],[24,166]],PLATFORM={x:24,y:378,w:268,h:20},BEAM={x:216,y:542,w:192,h:48};
+const slope=82/342,tip=348;
+const RAMP=[[24,150],[tip,150+(tip-24)*slope],[tip,166+(tip-24)*slope],[24,166]],PLATFORM={x:24,y:378,w:268,h:20},BEAM={x:216,y:542,w:192,h:48};
+const RAMP_BOUNDS={minX:Math.min(...RAMP.map(p=>p[0])),maxX:Math.max(...RAMP.map(p=>p[0])),minY:Math.min(...RAMP.map(p=>p[1])),maxY:Math.max(...RAMP.map(p=>p[1]))};
+function rampTop(x){const [a,b]=RAMP;return a[1]+(x-a[0])*(b[1]-a[1])/(b[0]-a[0]);}
+const roofSlope=(RAMP[1][1]-RAMP[0][1])/(RAMP[1][0]-RAMP[0][0]),ROOF_NORMAL={x:roofSlope/Math.hypot(1,roofSlope),y:-1/Math.hypot(1,roofSlope)};
+function nearRamp(p){const b=RAMP_BOUNDS;return p.x+p.r>=b.minX&&p.x-p.r<=b.maxX&&p.y+p.r>=b.minY&&p.y-p.r<=b.maxY;}
 function contact(p,points){
  let inside=true,best=Infinity,qx=0,qy=0,nx=0,ny=0;
  for(let i=0;i<points.length;i++){const a=points[i],b=points[(i+1)%points.length],dx=b[0]-a[0],dy=b[1]-a[1],len2=dx*dx+dy*dy;
@@ -40,5 +45,5 @@ function rectUnion(p,boxes,left=-Infinity,right=Infinity){
  const q=candidates[0],dx=q.x-p.x,dy=q.y-p.y,d=Math.hypot(dx,dy),nx=dx/d,ny=dy/d,vn=(p.vx||0)*nx+(p.vy||0)*ny;
  p.x=q.x;p.y=q.y;if(vn<0){p.vx-=vn*nx;p.vy-=vn*ny;}return true;
 }
-const api={RAMP,PLATFORM,BEAM,contact,project,boxDepth,rectUnion};if(typeof module!=='undefined')module.exports=api;else root.KingGeometry=api;
+const api={RAMP,RAMP_BOUNDS,rampTop,ROOF_NORMAL,nearRamp,PLATFORM,BEAM,contact,project,boxDepth,rectUnion};if(typeof module!=='undefined')module.exports=api;else root.KingGeometry=api;
 })(globalThis);
