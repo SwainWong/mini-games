@@ -46,8 +46,9 @@ function collideWorld(g,p){
   const minR=Math.max(0,Math.floor((p.y-p.r-BOARD_Y)/CELL)),maxR=Math.min(ROWS-1,Math.floor((p.y+p.r-BOARD_Y)/CELL));
   for(let r=minR;r<=maxR;r++)for(let c=minC;c<=maxC;c++)if(g.board[r*COLS+c]!=null&&g.board[r*COLS+c]>=0)rect(p,BOARD_X+c*CELL,BOARD_Y+r*CELL,CELL,CELL);
 }
-const heads=new Int32Array(4096),links=new Int32Array(2000);
+const heads=new Int32Array(4096);let links=new Int32Array(2000);
 function pairs(particles){
+ if(links.length<particles.length)links=new Int32Array(particles.length*2);
  heads.fill(-1);const size=19,stride=32;
  for(let i=0;i<particles.length;i++){
   const p=particles[i],cx=Math.floor(p.x/size),cy=Math.floor(p.y/size)+16;
@@ -64,7 +65,7 @@ function pairs(particles){
 }
 class Game{
  constructor(index=0,options={}){
-  this.levelIndex=index;this.level=L.levels[index];if(this.level.solution)M.remember(this.level.board,this.level.solution);this.board=[...this.level.board];this.state='ready';this.reason='';this.time=0;this.accumulator=0;this.collected=0;this.actions=0;this.operation=null;this.events=[];this.particles=[];this.cleared=0;this.random=random(this.level.seed);this.sourceEnabled=true;this.spawnClock=0;this.queued=0;this.supplied=0;this.spawned=0;this.contact=0;this.contactForce=0;this.normalImpulse=0;this.compression=0;this.shield={x:this.level.shieldStart,vx:0,mass:20,damping:22,resistance:this.level.resistance||95};this.clearance=this.shield.x-BODY_WIDTH-SPIKE_X;this.safeTime=0;this.remixes=2;this.hp=100;this.maxHp=100;this.hits=0;this.nextDamageAt=0;this.chain=0;this.initialGems=M.remaining(this.board);this.rallies=0;this.rallyUntil=0;this.rallyCooldown=0;this.lastHurt=-10;this.walkTime=0;this.rallySeed=options.rallySeed??Math.floor(Math.random()*4294967296);this.rallyRandom=random(this.rallySeed);
+  this.levelIndex=index;this.level=L.levels[index];if(this.level.solution)M.remember(this.level.board,this.level.solution);this.board=[...this.level.board];this.state='ready';this.reason='';this.time=0;this.accumulator=0;this.collected=0;this.actions=0;this.operation=null;this.events=[];this.particles=[];this.cleared=0;this.random=random(this.level.seed);this.sourceEnabled=true;this.spawnClock=0;this.queued=0;this.supplied=0;this.spawned=0;this.contact=0;this.contactForce=0;this.normalImpulse=0;this.compression=0;this.shield={x:this.level.shieldStart,vx:0,mass:20,damping:22,resistance:this.level.resistance||95};this.clearance=this.shield.x-BODY_WIDTH-SPIKE_X;this.safeTime=0;this.remixes=2;this.hp=100;this.maxHp=100;this.hits=0;this.nextDamageAt=0;this.chain=0;this.initialGems=M.remaining(this.board);this.rallies=0;this.rallyUntil=0;this.rallyCooldown=0;this.lastHurt=-10;this.walkTime=0;this.rallySeed=options.rallySeed??Math.floor(Math.random()*4294967296);this.rallyRandom=random(this.rallySeed);this.recovery=null;this.recoveries=0;this.mechanicalTime=0;
   for(let row=0,y=9;y<390;y+=12.8,row++)for(let x=32+(row%2)*7.4;x<401;x+=14.8){
    const roof=G.rampTop(Math.min(x,G.RAMP_BOUNDS.maxX));
    if(x>G.RAMP_BOUNDS.maxX+8||y<roof-8||x>this.shield.x+8&&y>roof+24)this.addParticle(x,y);
@@ -89,7 +90,7 @@ class Game{
     // Each brick falls independently; only the actual brick or grain below
     // supports it. An obstructed column never suspends an unrelated column.
     for(const q of op.tiles)if(q!==t&&q.x===t.x&&q.y>=bottom-.001)advance=Math.min(advance,Math.max(0,q.y-bottom));
-    for(const p of this.particles){const gap=p.y-p.r-bottom;
+    for(const p of this.particles){if(p.tray)continue;const gap=p.y-p.r-bottom;
      if(p.x+p.r>t.x&&p.x-p.r<t.x+48&&gap>=-.01&&gap<advance+.02){advance=Math.min(advance,Math.max(0,gap-.02));contacts.push({t,p});}
     }
     t.y+=advance;
@@ -107,7 +108,7 @@ class Game{
    }
    const done=op.tiles.every(t=>t.y>=t.targetY-.0001),progress=op.tiles.reduce((sum,t)=>sum+t.y-t.startY,0);
    if(op.progressAt==null||progress-(op.progressTravel||0)>.5){op.progressAt=this.time;op.progressTravel=progress;}
-   if(!done&&this.time-op.progressAt>3.5){this.state='lost';this.reason='jam';this.sourceEnabled=false;this.rallyUntil=0;this.events.push({type:'jam'});return;}
+   if(!done&&(this.time-op.progressAt>.7||age>2.5)){this.beginRecovery();return;}
    if(done){this.board=op.after;this.operation=null;this.events.push({type:'land'});this.checkCascade();}return;
   }
   if(op.valid){
@@ -115,6 +116,38 @@ class Game{
    if(age>=.34&&!op.blasted){op.blasted=true;for(const i of op.matched)this.board[i]=null;this.cleared+=op.matched.length;this.chain++;this.events.push({type:'match',indices:[...op.matched],colors:op.after,chain:this.chain});}
    if(age>=.48)this.beginFall();
   }else if(age>=.3){this.events.push({type:'invalid'});this.operation=null;}
+ }
+ // A temporary collector sits 24 units in front of the masonry (half-depth
+ // 8). Lift first, then settle the bricks: no gold crosses a solid in its plane.
+ beginRecovery(){
+  const op=this.operation;if(op?.kind!=='fall'||this.recovery)return;
+  const sweeps=op.tiles.filter(t=>t.y<t.targetY-.0001).map(t=>({x:t.x-.1,y:t.y-.1,w:48.2,h:t.targetY-t.y+48.2}));
+  const batch=++this.recoveries;
+  for(const p of this.particles)if(!p.tray&&sweeps.some(b=>G.boxDepth(p,b)>0)){p.tray={batch,lifting:true};p.z=0;p.vx=0;p.vy=0;}
+  this.recovery={elapsed:0,liftElapsed:0,batch};this.events.push({type:'recovery'});
+ }
+ recoverStep(){
+  const r=this.recovery,op=this.operation;r.elapsed+=DT;
+  // Drain the previous batch before raising another into the same tray depth.
+  // This preserves particle separation even when two recoveries overlap in time.
+  if(this.particles.some(p=>p.tray&&p.tray.batch!==r.batch)){this.transportStep();return;}
+  r.liftElapsed+=DT;
+  for(const p of this.particles)if(p.tray?.batch===r.batch&&p.tray.lifting){p.z=24*Math.min(1,r.liftElapsed/.2);if(r.liftElapsed>=.2){p.z=24;p.tray.lifting=false;}}
+  this.transportStep();
+  if(r.liftElapsed<.2)return;
+  // The main world is frozen; every grain in the entire sweep has left its
+  // depth. All bricks can now finish their original gravity destination.
+  for(const t of op.tiles)t.y=Math.min(t.targetY,t.y+500*DT);
+  if(op.tiles.every(t=>t.y>=t.targetY-.0001)){
+   this.board=op.after;this.operation=null;this.recovery=null;
+   this.events.push({type:'land'},{type:'recovered'});this.checkCascade();
+  }
+ }
+ transportStep(){
+  const moving=this.particles.filter(p=>p.tray&&!p.tray.lifting);
+  for(const p of moving){p.px=p.x;p.py=p.y;p.vy=Math.min(570,p.vy+680*DT);p.vx*=.98;p.x+=p.vx*DT;p.y+=p.vy*DT;p.angle+=p.spin*DT;}
+  for(let pass=0;pass<8;pass++){pairs(moving);for(const p of moving){if(p.x-p.r<24)surface(p,1,0,24-p.x+p.r);if(p.x+p.r>408)surface(p,-1,0,p.x+p.r-408);}}
+  this.particles=this.particles.filter(p=>{if(p.tray&&!p.tray.lifting&&p.y-p.r>770){this.collected++;this.events.push({type:'drain',x:p.x,y:770});return false;}return true;});
  }
  beginFall(){
   const settled=M.gravity(this.board);
@@ -140,7 +173,7 @@ class Game{
   this.board=candidate.board;this.remixes--;this.events.push({type:'remix'});return true;
  }
  hint(){const p=M.solveClear(this.board,2500);if(p?.path.length)return p.path[0];const all=M.legal(this.board);return all.length?[all[0].a,all[0].b]:[];}
- update(dt){if(this.state!=='playing')return;this.accumulator+=Math.min(.1,Math.max(0,dt));while(this.accumulator+1e-9>=DT&&this.state==='playing'){this.step();this.accumulator-=DT;}}
+ update(dt){if(this.state!=='playing'&&this.state!=='won')return;this.accumulator+=Math.min(.1,Math.max(0,dt));while(this.accumulator+1e-9>=DT){this.step();this.accumulator-=DT;if(this.state==='lost')break;}}
  capacity(){
   // Only connected empty board space can receive grains; sealed cavities do
   // not justify squeezing more particles into the reservoir.
@@ -153,16 +186,20 @@ class Game{
   if(!this.sourceEnabled)return;
   this.spawnClock+=this.level.rate*DT;
   while(this.spawnClock>=1){this.spawnClock--;this.supplied++;this.queued++;}
-  if(this.queued>0&&this.particles.length<this.capacity()){
-   for(let tryIndex=0;tryIndex<6;tryIndex++){const x=32+this.random()*366,y=8;if(this.particles.every(p=>(p.x-x)**2+(p.y-y)**2>216)){this.addParticle(x,y);this.queued--;break;}}
+  if(this.queued>0&&this.particles.length<3200&&this.particles.filter(p=>!p.tray).length<this.capacity()){
+   for(let tryIndex=0;tryIndex<6;tryIndex++){const x=32+this.random()*366,y=8;if(this.particles.every(p=>p.tray||(p.x-x)**2+(p.y-y)**2>216)){this.addParticle(x,y);this.queued--;break;}}
   }
  }
  step(){
-  this.time+=DT;this.animateSwap();if(this.state!=='playing')return;this.emit();this.normalImpulse=0;this.compression=0;
-  for(const p of this.particles){p.px=p.x;p.py=p.y;p.vy=Math.min(570,p.vy+680*DT);p.vx*=.999;p.x+=p.vx*DT;p.y+=p.vy*DT;p.angle+=p.spin*DT;p.spin*=.995;}
-  for(let pass=0;pass<8;pass++){pairs(this.particles);for(const p of this.particles)collideWorld(this,p);}
-  const remaining=[];for(const p of this.particles){if(p.y-p.r>754){this.collected++;this.events.push({type:'drain',x:p.x,y:754});}else remaining.push(p);}this.particles=remaining;
-  this.contact=remaining.filter(p=>p.y>231&&p.y<378&&p.x>=this.shield.x-1&&p.x-p.r<this.shield.x+1.5).length;
+  this.mechanicalTime+=DT;
+  if(this.state==='won'){this.transportStep();return;}
+  if(this.recovery){this.recoverStep();return;}
+  this.time+=DT;this.animateSwap();if(this.state!=='playing'||this.recovery)return;this.transportStep();this.emit();this.normalImpulse=0;this.compression=0;
+  const main=this.particles.filter(p=>!p.tray);
+  for(const p of main){p.px=p.x;p.py=p.y;p.vy=Math.min(570,p.vy+680*DT);p.vx*=.999;p.x+=p.vx*DT;p.y+=p.vy*DT;p.angle+=p.spin*DT;p.spin*=.995;}
+  for(let pass=0;pass<8;pass++){pairs(main);for(const p of main)collideWorld(this,p);}
+  const remaining=[];for(const p of this.particles){if(!p.tray&&p.y-p.r>754){this.collected++;this.events.push({type:'drain',x:p.x,y:754});}else remaining.push(p);}this.particles=remaining;
+  this.contact=remaining.filter(p=>!p.tray&&p.y>231&&p.y<378&&p.x>=this.shield.x-1&&p.x-p.r<this.shield.x+1.5).length;
   // Static granular load comes from actual touching bodies; impulse/compression
   // add the dynamic part. Queued or merely existing stones exert no force.
   const load=this.contact*7+this.normalImpulse/DT*.018+this.compression*24;
@@ -183,15 +220,15 @@ class Game{
  }
  finishConstraints(){
   const boxes=this.boxes();
-  for(const p of this.particles){
+  for(const p of this.particles){if(p.tray)continue;
    // The moving shield has advanced since the contact-force solve. Resolve its
    // new boundary and any connected brick seam before exposing the next frame.
    for(let pass=0;pass<2;pass++){G.rectUnion(p,boxes,24,408);if(G.nearRamp(p))G.project(p,G.RAMP);}
   }
  }
- overlap(){const boxes=this.boxes();let maximum=0;for(const p of this.particles){for(const b of boxes)maximum=Math.max(maximum,G.boxDepth(p,b));if(G.nearRamp(p))maximum=Math.max(maximum,G.contact(p,G.RAMP).depth);}return maximum;}
+ overlap(){const boxes=this.boxes();let maximum=0;for(const p of this.particles){if(p.tray&&(p.z||0)-p.r>=8)continue;for(const b of boxes)maximum=Math.max(maximum,G.boxDepth(p,b));if(G.nearRamp(p))maximum=Math.max(maximum,G.contact(p,G.RAMP).depth);}return maximum;}
  pose(){if(this.time<this.rallyUntil)return this.rallyUntil-this.time>1.95?6:7;if(this.time-this.lastHurt<.5)return 5;if(this.state==='playing'&&Math.abs(this.shield.vx)>.1)return 1+Math.floor(this.walkTime*6)%4;return 0;}
- snapshot(){return{level:this.levelIndex+1,state:this.state,hp:this.hp,maxHp:this.maxHp,hits:this.hits,remaining:M.remaining(this.board),initialGems:this.initialGems,rallyActive:this.time<this.rallyUntil,rallyRemaining:Math.max(0,this.rallyUntil-this.time),rallies:this.rallies,rallySeed:this.rallySeed,pose:this.pose(),stockFill:+(this.particles.filter(p=>p.y<150).length/this.initialUpper).toFixed(3),reason:this.reason,actions:this.actions,collected:this.collected,target:this.level.target,time:+this.time.toFixed(3),spawned:this.spawned,supplied:this.supplied,queued:this.queued,active:this.particles.length,valve:this.sourceEnabled,contact:this.contact,contactForce:+this.contactForce.toFixed(3),shield:{x:+this.shield.x.toFixed(3),velocity:+this.shield.vx.toFixed(3)},clearance:+this.clearance.toFixed(3),safeTime:+this.safeTime.toFixed(3),board:[...this.board],falling:this.operation?.kind==='fall'?this.operation.tiles.map(p=>({from:p.from,to:p.to,y:+p.y.toFixed(2),targetY:p.targetY})):[],phase:this.operation?{kind:this.operation.kind,valid:this.operation.valid,age:+(this.time-this.operation.started).toFixed(3),blasted:this.operation.blasted,matched:[...this.operation.matched]}:null,remixes:this.remixes,stars:this.state==='won'?(this.actions<=this.level.par?3:this.actions<=this.level.par+3?2:1):0};}
+ snapshot(){return{level:this.levelIndex+1,state:this.state,hp:this.hp,maxHp:this.maxHp,hits:this.hits,remaining:M.remaining(this.board),initialGems:this.initialGems,rallyActive:this.time<this.rallyUntil,rallyRemaining:Math.max(0,this.rallyUntil-this.time),rallies:this.rallies,rallySeed:this.rallySeed,pose:this.pose(),stockFill:+(this.particles.filter(p=>!p.tray&&p.y<150).length/this.initialUpper).toFixed(3),reason:this.reason,actions:this.actions,collected:this.collected,target:this.level.target,time:+this.time.toFixed(3),spawned:this.spawned,supplied:this.supplied,queued:this.queued,active:this.particles.length,mainActive:this.particles.filter(p=>!p.tray).length,trayActive:this.particles.filter(p=>p.tray).length,recoveries:this.recoveries,recovery:this.recovery?{elapsed:+this.recovery.elapsed.toFixed(3),batch:this.recovery.batch}:null,mechanicalTime:+this.mechanicalTime.toFixed(3),valve:this.sourceEnabled,contact:this.contact,contactForce:+this.contactForce.toFixed(3),shield:{x:+this.shield.x.toFixed(3),velocity:+this.shield.vx.toFixed(3)},clearance:+this.clearance.toFixed(3),safeTime:+this.safeTime.toFixed(3),board:[...this.board],falling:this.operation?.kind==='fall'?this.operation.tiles.map(p=>({from:p.from,to:p.to,y:+p.y.toFixed(2),targetY:p.targetY})):[],phase:this.operation?{kind:this.operation.kind,valid:this.operation.valid,age:+(this.time-this.operation.started).toFixed(3),blasted:this.operation.blasted,matched:[...this.operation.matched]}:null,remixes:this.remixes,stars:this.state==='won'?(this.actions<=this.level.par?3:this.actions<=this.level.par+3?2:1):0};}
 }
 const api={Game};if(typeof module!=='undefined')module.exports=api;else root.KingEngine=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

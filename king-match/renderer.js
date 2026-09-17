@@ -67,7 +67,20 @@ class Renderer{
   if(op?.kind==='fall')for(const tile of op.tiles)this.tile(tile.color,tile.x+1,tile.y+1,46,46);
   if(g.level.beam){const b=KingGeometry.BEAM;this.masonry([[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]]);this.label('固定石台 · 不计宝石',312,570,9,'#ffedc7');}
   // Particle artwork is bounded by the actual radius; visually solid falling stones.
-  for(const p of g.particles){c.save();c.translate(p.x,p.y);c.rotate(p.angle);this.sprite(5,-p.r,-p.r,p.r*2,p.r*2);c.restore();}
+  for(const p of g.particles.filter(p=>!p.tray)){c.save();c.translate(p.x,p.y);c.rotate(p.angle);this.sprite(5,-p.r,-p.r,p.r*2,p.r*2);c.restore();}
+  // Gold in the foreground collector has left the masonry depth. A raised
+  // glass rim, offset shadow, lift rings and a separate mouth make that clear.
+  const tray=g.particles.filter(p=>p.tray);
+  if(tray.length||g.recovery){
+   c.save();c.shadowColor='#02080bcc';c.shadowBlur=12;c.shadowOffsetX=5;c.shadowOffsetY=5;
+   c.fillStyle='#92e2ed18';c.fillRect(24,398,384,372);c.shadowBlur=0;c.shadowOffsetX=c.shadowOffsetY=0;
+   c.strokeStyle='#f1ce7bd9';c.lineWidth=2;c.beginPath();c.moveTo(24,770);c.lineTo(24,398);c.lineTo(408,398);c.lineTo(408,770);c.stroke();
+   c.strokeStyle='#e0faff80';c.lineWidth=1;c.strokeRect(28,402,376,364);
+   for(const p of tray){const lift=(p.z||0)/24;c.save();c.translate(p.x,p.y);c.shadowBlur=3+lift*5;c.shadowOffsetX=lift*3;c.shadowOffsetY=lift*5;c.shadowColor='#02090deb';c.rotate(p.angle);this.sprite(5,-p.r,-p.r,p.r*2,p.r*2);c.restore();if(p.tray.lifting){c.strokeStyle='#c4f7ff';c.beginPath();c.ellipse(p.x,p.y,p.r+lift*4,(p.r+lift*4)*.6,0,0,Math.PI*2);c.stroke();}}
+   c.fillStyle='#19383fe8';c.fillRect(104,746,224,23);this.label('前置集金槽  ↓  安全排出',216,761,10,'#ddf9f3');
+   if(g.recovery){c.fillStyle='#19383fee';c.fillRect(98,403,236,27);this.label('自动疏通中 · 国王安全等待',216,421,11,'#ffdf99');}
+   c.restore();
+  }
   c.fillStyle='#101923df';c.beginPath();c.roundRect(103,7,226,25,10);c.fill();this.label(g.sourceEnabled?'满仓供料 · 持续补入':'救援成功 · 供料关闭',216,24,11,'#ffe6aa');
   if(t-this.hurtAt<.65){const a=t-this.hurtAt;c.globalAlpha=1-a/.65;this.label('−12 HP',g.shield.x-130,310-a*25,22,'#ffad97');c.globalAlpha=1;}
   const outlet=c.createLinearGradient(0,739,0,780);outlet.addColorStop(0,'#79c7b810');outlet.addColorStop(1,'#64c4ae72');c.fillStyle=outlet;c.fillRect(24,739,384,41);c.strokeStyle='#92c6af99';c.lineWidth=1;c.setLineDash([4,5]);c.beginPath();c.moveTo(29,754);c.lineTo(403,754);c.stroke();c.setLineDash([]);this.label('↓     安 全 出 口     ↓',216,773,10,'#c8e7d1');
