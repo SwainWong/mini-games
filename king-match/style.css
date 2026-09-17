@@ -7,3 +7,4 @@
 @media(max-width:700px){.site-header{height:36px}.game-top{padding:6px 13px}.game-top h2{font-size:19px}.kicker{font-size:7px}.hud{padding:6px 13px}.hud-cell>b{font-size:21px}.controls{padding:2px 7px}.status{display:none}.game-shell{width:calc(100% - 24px)}.board-wrap{aspect-ratio:432/780}}
 @media(max-width:700px){.game-shell{max-width:356px}}
 @media(max-width:700px) and (min-height:780px){.game-shell{max-width:min(356px,calc((100svh - 196px) * .553846));min-width:326px}}
+.controls button{min-width:0;flex:1;gap:5px}.controls span{font-size:10px}.shield-stat{min-width:65px}.ready-card b{color:#ffe1a0}

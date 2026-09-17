@@ -1,0 +1,5 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');const M=require('../match.js');
+test('two matching gems are never a match; lines start at three',()=>{const b=Array(56).fill(null);b[0]=b[1]=1;assert.deepEqual(M.matches(b),[]);b[2]=1;assert.deepEqual(M.matches(b),[0,1,2]);});
+test('L shapes without a straight triple do not match; a cross counts once',()=>{const b=Array(56).fill(null);b[0]=b[1]=b[8]=0;assert.deepEqual(M.matches(b),[]);b[2]=b[16]=0;assert.equal(M.matches(b).length,5);});
+test('valid adjacent exchange must make a triple at a swapped endpoint',()=>{const b=Array(56).fill(null);[b[0],b[1],b[2],b[9]]=[1,2,1,1];assert.deepEqual(M.preview(b,1,9).cells,[0,1,2]);assert.equal(M.preview(b,0,9),null);assert.equal(M.preview(b,0,8),null);assert.equal(M.preview(b,0,1),null);});
+test('seeded paint has no initial triples and multiple actual choices',()=>{for(let seed=1;seed<10;seed++){const b=M.paint(Array(56).fill(0),seed);assert.equal(M.matches(b).length,0);assert.ok(M.legal(b).length>=3);}});

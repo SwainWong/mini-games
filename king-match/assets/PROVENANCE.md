@@ -6,3 +6,5 @@ Created 2026-09-17 with the built-in image tool for this game. Original generate
 - `castle.png`: original portrait castle interior, straight-on view, dark recessed masonry, gilt side columns, torchlight, empty central play area. Generation: exec-36761c8d-7d72-4815-b25f-db14514621dc.
 
 User-supplied references informed broad visual style and physical drainage mechanics only. Audio is synthesized locally by Web Audio, no external recordings. No paid resource purchases or third-party runtime asset requests.
+
+- `spikes-v2.png`: original transparent raster sprite generated with the built-in image tool for the v2 pressure correction. Five silver spikes pointing right, mounted on a dark iron/oak strip, warm castle lighting. Generation: exec-2f65c405-3053-42d1-b676-14d9e3e42c8b. Full original PNG preserved; canvas scales it to the hazard collision location. Producer approved this free resource; no purchase.
