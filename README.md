@@ -5,11 +5,14 @@
 - **在线主页**：https://swainwong.github.io/mini-games/
 - **沙里有珠**：https://swainwong.github.io/mini-games/sand-marbles/
 
+- **国王消消乐**：https://swainwong.github.io/mini-games/king-match/
+
 ## 目录
 
 ```text
 index.html             # 游戏入口主页
 home.css               # 主页样式
+king-match/            # 国王消消乐：2 个消除疏导落石的关卡
 sand-marbles/          # 沙里有珠：15 个关卡的挖沙落珠游戏
   index.html
   style.css

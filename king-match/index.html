@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#141d25">
+<meta name="description" content="消除宝石，疏通落石，救出国王。两个有真实落石碰撞的城堡谜题。"><title>国王消消乐 · Mini Games</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='52'%3E♛%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="app">
+<header class="site-header"><a href="../" class="brand">✳ <span>mini games</span><small>玩一小会儿</small></a><a class="back" href="../">← 返回游戏收藏</a></header>
+<main class="layout">
+<aside class="story">
+<div class="eyebrow"><span></span> A ROYAL LITTLE RESCUE</div>
+<h1>国王<span>消消乐</span><i>♛</i></h1>
+<p class="lead">王冠可以很重，<br>落石可不能。</p>
+<p class="description">消除宝石，打通一条生路。<br>让每一颗落石滚向出口，<br>替手忙脚乱的国王解个围。</p>
+<div class="chapter-list" aria-label="两段王室历险">
+<button class="chapter active" data-level="0"><b>01</b><span>王室金库<small>打通第一条泄石通道</small></span><em>↗</em></button>
+<button class="chapter" data-level="1"><b>02</b><span>水晶密室<small>绕过石梁，另辟蹊径</small></span><em>↗</em></button>
+</div>
+<div class="how"><span>救援小诀窍</span><p>先打开底部，再往上疏通。<br>相邻 <b>2 块</b>同色宝石，就能一起消除。</p></div>
+<div class="story-footer">两段历险 · 随时重来 · 无需登录</div>
+</aside>
+<section class="game-shell" aria-label="国王消消乐游戏">
+<div class="game-top"><div><span class="kicker" id="chapter-label">LEVEL 01 / 02</span><h2 id="level-title">王室金库</h2></div><div class="top-actions"><button id="choose-level" aria-label="选择关卡" title="选择关卡">选关</button><button id="sound" aria-label="开启音效" aria-pressed="false" title="开启音效">音效 关</button></div></div>
+<div class="hud"><div class="hud-cell"><span>剩余步数</span><b id="moves">10</b></div><div class="hud-cell drainage"><div><span>安全排出</span><b><strong id="collected">0</strong> <small>/ <span id="target">100</span></small></b></div><div class="meter"><i id="drain-fill"></i></div></div><div class="hud-cell shield-stat"><span id="shield-state">护盾完好</span><b id="health">100<small>%</small></b></div></div>
+<div class="board-wrap">
+<canvas id="game" width="432" height="780" tabindex="0" aria-label="宝石棋盘：方向键选择，空格消除相邻同色组。鼠标或触屏点击两块以上同色砖，打通石头到底部的通道。">你的浏览器需要支持 Canvas。</canvas>
+<div class="overlay" id="ready"><div class="ready-card"><span class="modal-kicker">陛下需要你的帮助</span><h3 id="ready-title">把落石，送到下面。</h3><p id="ready-description">点击相邻的同色砖，打开通道。<br>从底部开始，会更从容。</p><button class="gold-button" id="start" disabled>正在准备王国…</button><small>前 12 秒护盾保护 · 无倒计时</small></div></div>
+<div class="overlay result" id="result" hidden><div class="result-card"><div id="stars" class="stars">✦ ✦ ✦</div><span class="modal-kicker" id="result-kicker">RESCUE COMPLETE</span><h3 id="result-title">国王得救了！</h3><p id="result-detail"></p><button class="gold-button" id="result-next">下一关 →</button><button class="quiet-button" id="result-retry">再试一次</button></div></div>
+<div class="overlay pause" id="pause-overlay" hidden><div class="ready-card"><span class="modal-kicker">TAKE YOUR TIME</span><h3>歇一会儿，国王等你。</h3><p>落石和护盾已暂停。</p><button class="gold-button" id="resume">继续救援</button></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+<div class="controls"><button id="restart">↻ <span>重来</span></button><button id="hint">✧ <span>提示</span></button><button id="pause">Ⅱ <span>暂停</span></button><button id="rules">? <span>玩法</span></button></div>
+<p class="status" id="status" role="status">先看好路线，准备好了就开始。</p>
+</section>
+</main>
+<footer class="page-footer"><span>一点策略，一点运气，还有一位需要你的国王。</span><span>THE KING'S LITTLE ESCAPE</span></footer>
+</div>
+<dialog id="rules-dialog"><div class="dialog-head"><span class="modal-kicker">皇家救援手册</span><button data-close="rules-dialog" aria-label="关闭玩法">×</button></div><h2>消掉宝石，疏通落石。</h2><ol><li><b>相邻同色，一起消除</b><p>点击上下左右相连的 2 块及以上同色砖。每组扣 1 步；单块、空处和石梁不会扣步。砖块不会补位。</p></li><li><b>先下后上，连成通道</b><p>只有石头真的越过底部出口才计入救援进度。灰色石梁不能消除，第二关要从它的左边绕过。</p></li><li><b>盾牌受压，就要快一点</b><p>开始后前 12 秒护盾受保护。之后落石持续挤压盾面才会耗损，解除接触后会慢慢恢复。没有倒计时失败。</p></li><li><b>步数有限，随时可重来</b><p>步数用尽后会等待落石结算，最多 10 秒。达到排出目标获胜；护盾耗尽或步数用尽且目标未达成则失败。</p></li></ol><p class="dialog-note">过关剩余 ≥3 步得 3 星，≥1 步得 2 星，其余 1 星。可选关重玩；记录只保留本次打开期间，刷新全部重置。支持方向键＋空格。</p><button class="gold-button" data-close="rules-dialog">明白了</button></dialog>
+<dialog id="level-dialog"><div class="dialog-head"><span class="modal-kicker">CHOOSE YOUR ADVENTURE</span><button data-close="level-dialog" aria-label="关闭选关">×</button></div><h2>两段王室历险</h2><div class="level-options"><button data-level="0"><b>01 · 王室金库</b><span>直通泄石 · 10 步</span></button><button data-level="1"><b>02 · 水晶密室</b><span>绕梁疏导 · 12 步</span></button></div><p class="dialog-note">随时选关。刷新后从第一关重新开始。</p></dialog>
+<script src="levels.js?v=1"></script><script src="engine.js?v=1"></script><script src="renderer.js?v=1"></script><script src="audio.js?v=1"></script><script src="game.js?v=1"></script>
+</body></html>
