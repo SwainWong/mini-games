@@ -14,7 +14,7 @@ async (page) => {
     const routes=solutions[number-1];
     await page.locator('[data-brush="14"]').click();await page.mouse.click(box.x+20*box.width/560,box.y+70*box.height/760);await page.locator('[data-brush="24"]').click();
     await page.waitForFunction(delay=>sandGame.snapshot().time>=delay,timing[number][1].delay);
-    for(const route of routes){const points=route.slice().reverse();await page.mouse.move(box.x+points[0][0]*box.width/560,box.y+points[0][1]*box.height/760);await page.mouse.down();for(const p of points.slice(1))await page.mouse.move(box.x+p[0]*box.width/560,box.y+p[1]*box.height/760,{steps:20});await page.mouse.up();}
+    for(const route of routes){const points=route.slice().reverse();await page.mouse.move(box.x+points[0][0]*box.width/560,box.y+points[0][1]*box.height/760);await page.mouse.down();for(const p of points.slice(1))await page.mouse.move(box.x+p[0]*box.width/560,box.y+p[1]*box.height/760,{steps:timing[number][1].ticks===1?10:20});await page.mouse.up();}
     await page.waitForFunction(()=>window.sandGame.snapshot().state!=='playing',null,{timeout:30000});
     const s=await page.evaluate(()=>window.sandGame.snapshot());
     if(s.state!=='won'||s.collected!==s.total||s.stars!==3)throw Error(`Stage ${number}: ${JSON.stringify(s)}`);

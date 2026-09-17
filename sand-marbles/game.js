@@ -3,12 +3,12 @@
   const {W,H,BOTTOM:SOIL_BOTTOM,GW,CELL,STEP,World,jarMouth}=SandCore,levels=SandLevels;
   const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),$=s=>document.querySelector(s);
   const colors={amber:{light:'#fff9c8',mid:'#ffd35a',base:'#f28a15',dark:'#975012',label:'琥珀'},blue:{light:'#e8fcff',mid:'#75dcff',base:'#2494dd',dark:'#24549a',label:'冰蓝'},jade:{light:'#eaffc9',mid:'#9cee9c',base:'#37ad7e',dark:'#26734e',label:'青玉'},rose:{light:'#fff0fb',mid:'#ffaad6',base:'#df5ba6',dark:'#972d7a',label:'玫瑰'}};
-  const features={worm:['〰','蚯蚓'],porter:['♟','搬罐小哥'],rival:['⚑','挖宝人']};
+  const features={worm:['〰','蚯蚓'],porter:['♟','搬罐小哥'],rival:['⚑','盗宝人']};
   const typeLabels={glass:'● 玻璃·顺滑',heavy:'⊕ 重力·更沉',rubber:'◎ 弹力·回弹',light:'◇ 轻盈·慢落'};
   const soil=document.createElement('canvas'),texture=document.createElement('canvas'),earth=document.createElement('canvas');soil.width=texture.width=earth.width=W;soil.height=texture.height=SOIL_BOTTOM;earth.height=H;
   const sc=soil.getContext('2d'),tc=texture.getContext('2d'),ec=earth.getContext('2d'),sound=new SandAudio(),best=new Map(),bestSand=new Map();
-  const art={porter:new Image(),rival:new Image()};let assetsReady=false;
-  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=`assets/${name}.png?v=6`;})));
+  const art={porter:new Image(),rival:new Image(),props:new Image(),jar:new Image()};let assetsReady=false;
+  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=`assets/${name}-v7.png`;})));
   let world,current=0,brush=24,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],seed=42,lastHud='',finished=false,motionCheck=0,stillFor=0,motionPositions=[];
   function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
   function roundRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
@@ -44,7 +44,7 @@
     const key=`${world.collected}:${world.terrain.units}`;if(key!==lastHud){lastHud=key;$('#collected').textContent=`${world.collected} / ${world.total}`;$('#dug-count').textContent=world.terrain.units;$('#star-budget').textContent=`三星 ≤ ${world.budget.three} · 二星 ≤ ${world.budget.two}`;const meter=$('#sand-meter');meter.max=world.budget.two;meter.low=world.budget.three;meter.high=world.budget.two;meter.optimum=0;meter.value=Math.min(world.terrain.units,world.budget.two);meter.setAttribute('aria-valuetext',`已挖 ${world.terrain.units}，三星额度 ${world.budget.three}，二星额度 ${world.budget.two}`);}
     if(world.started&&world.time-motionCheck>=1){const active=world.balls.filter(b=>b.active),moving=active.some((b,i)=>!motionPositions[i]||Math.hypot(b.x-motionPositions[i][0],b.y-motionPositions[i][1])>2);stillFor=moving||pointer?0:stillFor+world.time-motionCheck;motionPositions=active.map(b=>[b.x,b.y]);motionCheck=world.time;}
     $('#board-wrap').dataset.danger=world.state==='playing'?(world.rival?.danger||'distant'):'distant';
-    $('#board-instruction').textContent=world.state==='won'?'宝藏全收齐！':world.state==='lost'?'失误已圈出 · 查看后可重来':stillFor>=6&&world.balls.some(b=>b.active)?`还有 ${world.balls.filter(b=>b.active).length} 颗停在沙中 · 可继续挖沙`:world.rival&&world.started?(world.rival.danger==='near'?'快！挖宝人就在珠子旁边':world.rival.danger==='approaching'?'小心，他越来越近了！':'挖宝人开挖了，快送珠子回家'):world.started?'送同色珠子回家':'按住划动，开始挖沙';
+    $('#board-instruction').textContent=world.state==='won'?'宝藏全收齐！':world.state==='lost'?'失误已圈出 · 查看后可重来':stillFor>=6&&world.balls.some(b=>b.active)?`还有 ${world.balls.filter(b=>b.active).length} 颗停在沙中 · 可继续挖沙`:world.rival&&world.started?(world.rival.danger==='near'?'快！盗宝人就在珠子旁边':world.rival.danger==='approaching'?'小心，他越来越近了！':'盗宝人开挖了，快送珠子回家'):world.started?'送同色珠子回家':'按住划动，开始挖沙';
   }
   function finish(){
     if(finished)return;finished=true;releasePointer();const won=world.state==='won',last=current===levels.length-1;
@@ -64,22 +64,27 @@
     c.beginPath();c.ellipse(x-r*.29,y-r*.40,r*.31,r*.24,-.5,0,Math.PI*2);c.fillStyle='#ffffffed';c.fill();c.beginPath();c.arc(x+r*.15,y+r*.03,r*.67,.1,2.4);c.lineWidth=r*.16;c.strokeStyle=p.light+'99';c.stroke();c.restore();
   }
   function rockDraw(rock){
-    ctx.save();ctx.translate(rock.x,rock.y);ctx.shadowColor='#813f3655';ctx.shadowBlur=7;ctx.shadowOffsetY=6;
-    const points=[];for(let i=0;i<10;i++){const a=i/10*Math.PI*2,r=1+Math.sin(i*9)*.025;points.push([Math.cos(a)*rock.rx*r,Math.sin(a)*rock.ry*r]);}
-    const shape=()=>{ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();};shape();const g=ctx.createLinearGradient(0,-rock.ry,0,rock.ry);g.addColorStop(0,'#e8ba96');g.addColorStop(.5,'#bc8b72');g.addColorStop(1,'#8c6661');ctx.fillStyle=g;ctx.fill();ctx.shadowColor='transparent';ctx.strokeStyle='#815848';ctx.lineWidth=2;ctx.stroke();
-    ctx.fillStyle='#f6d2a6';ctx.beginPath();ctx.moveTo(...points[5]);ctx.lineTo(...points[6]);ctx.lineTo(...points[7]);ctx.lineTo(...points[8]);ctx.lineTo(rock.rx*.3,-rock.ry*.35);ctx.lineTo(-rock.rx*.4,-rock.ry*.17);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='#9a6e5755';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-rock.rx*.35,-rock.ry*.14);ctx.lineTo(rock.rx*.18,rock.ry*.1);ctx.lineTo(rock.rx*.4,rock.ry*.6);ctx.stroke();ctx.restore();
+    if(!assetsReady)return;
+    ctx.save();ctx.shadowColor='#603a2388';ctx.shadowBlur=8;ctx.shadowOffsetY=6;
+    // The art is clipped to the same ellipse used by terrain and bead collision.
+    ctx.beginPath();ctx.ellipse(rock.x,rock.y,rock.rx,rock.ry,0,0,Math.PI*2);ctx.fillStyle='#916044';ctx.fill();ctx.clip();
+    ctx.drawImage(art.props,654,173,583,444,rock.x-rock.rx,rock.y-rock.ry,rock.rx*2,rock.ry*2);ctx.restore();
   }
-  function jarDraw(jar){
+  function jarLabel(jar){
     const x=jar.x,y=jarMouth(jar).y,p=colors[jar.color];ctx.save();
-    ctx.fillStyle='#703d2427';ctx.beginPath();ctx.ellipse(x,706,51,9,0,0,Math.PI*2);ctx.fill();
-    const body=()=>{ctx.beginPath();ctx.moveTo(x-40,y+7);ctx.bezierCurveTo(x-40,y+22,x-51,y+27,x-49,y+64);ctx.bezierCurveTo(x-48,y+90,x-40,y+99,x,y+99);ctx.bezierCurveTo(x+40,y+99,x+48,y+90,x+49,y+64);ctx.bezierCurveTo(x+51,y+27,x+40,y+22,x+40,y+7);ctx.closePath();};
-    const glass=ctx.createLinearGradient(x-50,y,x+50,y);glass.addColorStop(0,p.base+'b8');glass.addColorStop(.16,p.light+'c4');glass.addColorStop(.32,p.mid+'55');glass.addColorStop(.7,p.mid+'55');glass.addColorStop(.93,p.light+'c7');glass.addColorStop(1,p.base+'b8');body();ctx.fillStyle=glass;ctx.fill();ctx.strokeStyle=p.dark;ctx.lineWidth=3;ctx.stroke();ctx.strokeStyle=p.light+'bc';ctx.lineWidth=2;ctx.stroke();
-    for(let i=0;i<jar.balls.length;i++){const row=Math.floor(i/5),col=i%5;marble(ctx,x-33+col*16.5,y+82-row*16,7.6,jar.color);}
-    ctx.strokeStyle='#fff9e5b0';ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-36,y+29);ctx.quadraticCurveTo(x-42,y+48,x-37,y+65);ctx.stroke();ctx.strokeStyle='#fff9e575';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x+37,y+41);ctx.lineTo(x+38,y+57);ctx.stroke();
-    ctx.fillStyle=p.base;ctx.strokeStyle=p.dark;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y+4,49,10,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=p.dark;ctx.beginPath();ctx.ellipse(x,y,46,6,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle=p.light;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y,48,8,0,0,Math.PI*2);ctx.stroke();
-    ctx.fillStyle=p.dark+'e8';roundRect(ctx,x-23,y+21,46,22,9);ctx.fill();ctx.fillStyle='#fffaf0';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText(p.label,x,y+37);
-    if(jar.flash>0){ctx.globalAlpha=jar.flash*.6;body();ctx.strokeStyle='#fff9ce';ctx.lineWidth=5;ctx.stroke();}ctx.restore();
+    ctx.fillStyle=p.dark;ctx.beginPath();ctx.ellipse(x,y,46,5,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=p.base;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y+1,48,7,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle=p.light;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x,y-1,48,7,0,Math.PI,Math.PI*2);ctx.stroke();
+    const badge=ctx.createLinearGradient(x,y+25,x,y+48);badge.addColorStop(0,p.base);badge.addColorStop(1,p.dark);ctx.fillStyle=badge;roundRect(ctx,x-24,y+25,48,23,8);ctx.fill();ctx.strokeStyle=p.light;ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#fffaf0';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText(p.label,x,y+41);
+    if(jar.balls.length){ctx.fillStyle=p.dark;ctx.font='bold 11px sans-serif';ctx.fillText(`${jar.balls.length} 颗`,x,y+64);}
+    if(jar.flash>0){ctx.globalAlpha=jar.flash;ctx.strokeStyle='#fff6ac';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(x,y,51,10,0,0,Math.PI*2);ctx.stroke();}ctx.restore();
+  }
+  function jarDraw(jar,index){
+    if(!assetsReady||world.porter?.jar===index)return;
+    const x=jar.x,y=jarMouth(jar).y;ctx.save();ctx.fillStyle='#59392428';ctx.beginPath();ctx.ellipse(x,y+76,70,9,0,0,Math.PI*2);ctx.fill();
+    // Neutral ceramic carries a live colour rim/badge; opening is exactly the physical mouth.
+    ctx.drawImage(art.jar,22,375,1210,610,x-73,y-19,146,96);ctx.restore();jarLabel(jar);
   }
   function drawMaterial(b){
     if(b.type==='glass')return;ctx.save();ctx.translate(b.x,b.y);ctx.lineCap='round';
@@ -88,32 +93,39 @@
     if(b.type==='light'){ctx.fillStyle='#fffdf4';ctx.strokeStyle='#665e50';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(4,0);ctx.lineTo(0,6);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();ctx.stroke();}ctx.restore();
   }
   function mechanismDraw(){
-    const m=levels[current].mechanics,t=world.time;
-    for(const w of m.worms||[]){ctx.save();for(let i=6;i>=0;i--){const p=world.wormPoint(w,i*.13);ctx.beginPath();ctx.ellipse(p.x,p.y,6.5-i*.35,5.5-i*.2,0,0,Math.PI*2);ctx.fillStyle=i%2?'#b8796b':'#d39d88';ctx.fill();ctx.strokeStyle='#815544';ctx.lineWidth=.7;ctx.stroke();}const p=world.wormPoint(w);ctx.fillStyle='#fff3df';ctx.beginPath();ctx.arc(p.x+2,p.y-2,2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#422c20';ctx.beginPath();ctx.arc(p.x+2.6,p.y-2,1,0,Math.PI*2);ctx.fill();ctx.restore();}
+    if(!assetsReady)return;
+    for(const w of world.worms){const frame=Math.floor(world.time*7)%2;ctx.save();ctx.translate(w.x,w.y);ctx.rotate(Math.atan2(w.vy,w.vx));
+      ctx.shadowColor='#66312266';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
+      ctx.drawImage(art.props,frame?640:24,845,590,275,-44,-13,51,24);ctx.restore();}
   }
-  const spriteFrames={porter:[[200,0,440,512],[880,0,464,512],[190,512,470,512],[890,512,470,512]],rival:[[165,0,530,512],[842,0,490,512],[155,512,540,512],[850,512,490,512]]};
+  const spriteFrames={rival:[[0,0,627,627],[627,0,627,627],[0,627,627,627],[627,627,627,627]]};
   function sprite(name,frame,x,y,w,h,flip=false,angle=0){if(!assetsReady)return;const r=spriteFrames[name][frame];ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(flip?-1:1,1);ctx.drawImage(art[name],...r,-w/2,-h/2,w,h);ctx.restore();}
-  function porterDraw(front=false){
-    const p=world.porter;if(!p||front)return;const j=world.jars[p.jar],side=j.homeX<280?1:-1,moving=p.moving,t=world.time,bob=moving?Math.sin(t*29)*2:Math.sin(t*3)*.5;
-    const frame=moving?Math.floor(t*9)%2:p.phase==='lift'?3:2;
-    sprite('porter',frame,j.x+side*69,jarMouth(j).y+51+bob,116,132,side===1,moving?Math.sin(t*14)*.018:0);
-    if(moving){ctx.save();ctx.fillStyle='#fff0c284';for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(j.x+side*80-i*13,706+Math.sin(t*17+i)*3,5-i,2.5,0,0,Math.PI*2);ctx.fill();}ctx.restore();}
-    if(p.phase==='rest'||p.phase==='lift'){const bx=Math.max(39,Math.min(W-39,j.x+side*77));ctx.save();ctx.fillStyle='#fff6db';ctx.strokeStyle='#d29a4e';ctx.lineWidth=1.5;roundRect(ctx,bx-35,jarMouth(j).y-25,70,23,10);ctx.fill();ctx.stroke();ctx.fillStyle='#905829';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(p.phase==='rest'?'呼…好重！':'嘿——咻！',bx,jarMouth(j).y-9);ctx.restore();}
+  // Whole-body frames include the held jar and correct hand/handle occlusion.
+  // Mouth landmarks are measured independently per frame, then pinned to jarMouth().
+  const porterMouths=[[253,218,90],[254,219,90],[250,220,93],[278,229,91],[264,229,91],[261,232,92]];
+  function porterDraw(){
+    const p=world.porter;if(!p||!assetsReady)return;const j=world.jars[p.jar],t=world.time;
+    const frame=p.moving?Math.floor(t*10)%2:p.phase==='wipe'?3:p.phase==='think'?4:p.phase==='lift'?5:2;
+    const [mx,my,rx]=porterMouths[frame],sx=46/rx,sy=.43,mouth=jarMouth(j);
+    ctx.save();ctx.fillStyle='#59392428';ctx.beginPath();ctx.ellipse(j.x,mouth.y+(480-my)*sy,72,8,0,0,Math.PI*2);ctx.fill();
+    ctx.drawImage(art.porter,frame%3*512,Math.floor(frame/3)*512,512,512,j.x-mx*sx,mouth.y-my*sy,512*sx,512*sy);ctx.restore();jarLabel(j);
+    if(p.moving){ctx.save();ctx.fillStyle='#fff0c284';for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(j.x-38+i*32,710+Math.sin(t*17+i)*3,5-i,2.5,0,0,Math.PI*2);ctx.fill();}ctx.restore();}
   }
   function rivalDraw(){
     const r=world.rival;if(!r)return;const t=world.time,near=r.danger==='near',frame=r.phase==='caught'?3:r.phase==='running'?2:r.phase==='watching'?0:Math.floor(t*(near?9:6))%2;
     ctx.save();if(near){ctx.fillStyle=`rgba(221,63,72,${.13+Math.sin(t*8)*.05})`;ctx.beginPath();ctx.arc(r.x,r.y,37,0,Math.PI*2);ctx.fill();}ctx.fillStyle='#68372135';ctx.beginPath();ctx.ellipse(r.x,r.y+26,29,8,0,0,Math.PI*2);ctx.fill();ctx.restore();
-    sprite('rival',frame,r.x,r.y-10+(r.phase==='running'?Math.sin(t*24)*2:0),83,86,r.fx<0,r.phase==='digging'?Math.sin(t*13)*.025:0);
+    sprite('rival',frame,r.x,r.y-10+(r.phase==='running'?Math.sin(t*24)*2:0),90,96,r.fx<0,r.phase==='digging'?Math.sin(t*13)*.025:0);
     if(r.phase==='caught'&&r.captured)marble(ctx,r.x+(r.fx<0?-31:31),r.y-44,8,r.captured.color);
     if(r.phase==='digging'){ctx.save();ctx.fillStyle='#ffe1a5';for(let i=0;i<4;i++){const u=(t*2.8+i*.23)%1;ctx.beginPath();ctx.arc(r.x+r.fx*22+(i-1.5)*u*18,r.y+12-u*28+u*u*24,2.5*(1-u),0,Math.PI*2);ctx.fill();}ctx.restore();}
-    ctx.save();const x=Math.max(47,Math.min(W-47,r.x)),y=r.y<140?r.y+40:r.y-64;ctx.fillStyle=near?'#c94d60':'#765484';roundRect(ctx,x-38,y,76,21,9);ctx.fill();ctx.fillStyle='#fff9ec';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(r.phase==='caught'?'抢到啦！':r.phase==='watching'?'挖宝人盯上了':near?'快被他抢到了！':'挖宝人',x,y+14);ctx.restore();
+
   }
   function failureDraw(){
-    const f=world.failure;if(!f)return;ctx.save();ctx.strokeStyle='#b73a32';ctx.fillStyle='#fff1da';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,18,0,Math.PI*2);ctx.fill();ctx.stroke();marble(ctx,f.x,f.y,9,f.color);if(f.targetX!==undefined){roundRect(ctx,f.targetX-43,f.targetY-6,86,22,5);ctx.stroke();}const x=Math.max(76,Math.min(W-76,f.x));ctx.fillStyle='#9e342e';roundRect(ctx,x-72,518,144,34,7);ctx.fill();ctx.fillStyle='#fff9ee';ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(f.kind==='stolen'?'被挖宝人抢走了！':f.target?`${colors[f.color].label} → ${colors[f.target].label} ×`:'珠子错过罐口',x,541);ctx.restore();
+    const f=world.failure;if(!f)return;ctx.save();ctx.strokeStyle='#b73a32';ctx.fillStyle='#fff1da';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,18,0,Math.PI*2);ctx.fill();ctx.stroke();marble(ctx,f.x,f.y,9,f.color);if(f.targetX!==undefined){roundRect(ctx,f.targetX-43,f.targetY-6,86,22,5);ctx.stroke();}const x=Math.max(76,Math.min(W-76,f.x));ctx.fillStyle='#9e342e';roundRect(ctx,x-72,518,144,34,7);ctx.fill();ctx.fillStyle='#fff9ee';ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(f.kind==='stolen'?'被盗宝人抢走了！':f.target?`${colors[f.color].label} → ${colors[f.target].label} ×`:'珠子错过罐口',x,541);ctx.restore();
   }
   function render(){
     syncTerrain();ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.save();ctx.shadowColor='#54281d99';ctx.shadowBlur=6;ctx.shadowOffsetY=5;ctx.drawImage(soil,0,0);ctx.restore();levels[current].rocks.forEach(rockDraw);mechanismDraw();
-    for(const b of world.balls)if(b.active){marble(ctx,b.x,b.y,b.r,b.color);drawMaterial(b);}world.jars.forEach(jarDraw);porterDraw();rivalDraw();failureDraw();
+    porterDraw();world.jars.forEach(jarDraw);
+    for(const b of world.balls)if(b.active){marble(ctx,b.x,b.y,b.r,b.color);drawMaterial(b);}rivalDraw();failureDraw();
     for(const p of particles){ctx.globalAlpha=Math.max(0,Math.min(1,p.life*1.7));ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;
     if(cursor&&world.state==='playing'){ctx.beginPath();ctx.arc(cursor.x,cursor.y,brush,0,Math.PI*2);ctx.strokeStyle=pointer?'#fff8e7aa':'#fff8e770';ctx.lineWidth=1;ctx.stroke();ctx.beginPath();ctx.arc(cursor.x,cursor.y,2,0,Math.PI*2);ctx.fillStyle='#fff9e8c0';ctx.fill();}
 

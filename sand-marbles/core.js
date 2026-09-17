@@ -24,10 +24,9 @@
   }
   function setupTerrain(level){const t=new Terrain(level.rocks);for(const p of level.tunnels)t.path(p,30,'initial');for(const g of level.groups)t.dig(g.x,g.y,40,'initial');return t;}
   function budgets(level){return {...level.budget};}
-  const phases=[['lift',.45,0],['walk',.65,.55],['rest',.7,.55],['walk',.7,1],['rest',.85,1],['return',.7,.5],['rest',.65,.5],['return',.7,0],['home',3.8,0]];
   const jarMouth=j=>({x:j.x,y:590-j.lift,halfWidth:46});
   class World{
-    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=false;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;
+    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=false;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
       if(level.mechanics.porter)this.choosePorter();
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
       this.total=this.balls.length;this.rival=level.mechanics.rival?new Rival(level,this.balls):null;
@@ -36,15 +35,29 @@
     random(){this.seed=(Math.imul(this.seed,1664525)+1013904223)>>>0;return this.seed/4294967296;}
     choosePorter(){
       const previous=this.porter?.jar;let choices=this.jars.map((_,i)=>i).filter(i=>this.jars.length===1||i!==previous);const index=choices[Math.floor(this.random()*choices.length)],jar=this.jars[index];
-      const left=Math.max(56,...this.jars.filter(j=>j.homeX<jar.homeX).map(j=>j.homeX+108)),right=Math.min(W-56,...this.jars.filter(j=>j.homeX>jar.homeX).map(j=>j.homeX-108));
-      const direction=this.random()<.5?-1:1;let offset=direction*Math.min(90,direction<0?jar.homeX-left:right-jar.homeX);if(Math.abs(offset)<12)offset=-direction*Math.min(90,direction<0?right-jar.homeX:jar.homeX-left);
-      this.porter={jar:index,phase:'lift',phaseIndex:0,elapsed:0,offset,progress:0,moving:false};this.effects.porterTrips++;
+      const left=Math.max(104,...this.jars.filter(j=>j.homeX<jar.homeX).map(j=>j.homeX+96)),right=Math.min(W-104,...this.jars.filter(j=>j.homeX>jar.homeX).map(j=>j.homeX-96));
+      const reach=this.level.mechanics.porterRange||90,direction=this.random()<.5?-1:1;let offset=direction*Math.min(reach,direction<0?jar.homeX-left:right-jar.homeX);if(Math.abs(offset)<12)offset=-direction*Math.min(reach,direction<0?right-jar.homeX:jar.homeX-left);
+      // Every trip has bounded but different strides and readable pauses. No teleporting jar.
+      const stride=.42+this.random()*.25,short=.35+this.random()*.3;
+      const pause=()=>.35+this.random()*.3,walk=()=>.3+this.random()*.22;
+      const phases=[['lift',.28,0],['walk',walk(),stride],['rest',pause(),stride],['walk',walk(),1],
+        [this.random()<.5?'wipe':'think',.65+this.random()*.3,1],['return',walk(),short],
+        [this.random()<.5?'think':'rest',pause(),short],['return',walk(),0],['home',4.2+this.random()*1.2,0]];
+      this.porter={jar:index,phase:'lift',phaseIndex:0,elapsed:0,offset,progress:0,moving:false,phases};this.effects.porterTrips++;
     }
-    wormPoint(w,offset=0){const t=Math.max(0,this.time-offset);return{x:w.x+Math.sin(t*w.speed)*w.range,y:w.y+Math.sin(t*w.speed*.6)*w.depth};}
+    wormPoint(w){return{x:w.x,y:w.y};}
+    moveWorm(w,dt){
+      const clear=(x,y)=>x>=20&&x<=W-20&&y>=80&&y<=BOTTOM-25&&this.level.rocks.every(r=>((x-r.x)/(r.rx+19))**2+((y-r.y)/(r.ry+19))**2>1);
+      let x=w.x+w.vx*dt,y=w.y+w.vy*dt;
+      if(x<w.homeX-w.range||x>w.homeX+w.range||!clear(x,w.y)){w.vx=-w.vx;x=w.x+w.vx*dt;}
+      if(y<w.homeY-w.depth||y>w.homeY+w.depth||!clear(w.x,y)){w.vy=-w.vy;y=w.y+w.vy*dt;}
+      if(!clear(x,y)){w.vx=-w.vx;w.vy=-w.vy;x=w.x+w.vx*dt;y=w.y+w.vy*dt;}
+      if(clear(x,y)){this.effects.wormCells+=this.terrain.line([w.x,w.y],[x,y],17,'worm');w.x=x;w.y=y;}
+    }
     mechanisms(dt){
-      for(const w of this.level.mechanics.worms||[]){const p=this.wormPoint(w);this.effects.wormCells+=this.terrain.dig(p.x,p.y,12,'worm');}
-      if(this.porter){const p=this.porter,j=this.jars[p.jar];p.elapsed+=dt;let phase=phases[p.phaseIndex];
-        if(p.elapsed>=phase[1]){p.elapsed-=phase[1];p.phaseIndex++;if(p.phaseIndex===phases.length){j.x=j.homeX;j.lift=0;this.choosePorter();return;}phase=phases[p.phaseIndex];this.events.push({type:phase[0]==='rest'?'rest':'shuffle'});}
+      for(const w of this.worms)this.moveWorm(w,dt);
+      if(this.porter){const p=this.porter,j=this.jars[p.jar],phases=p.phases;p.elapsed+=dt;let phase=phases[p.phaseIndex];
+        if(p.elapsed>=phase[1]){p.elapsed-=phase[1];p.phaseIndex++;if(p.phaseIndex===phases.length){j.x=j.homeX;j.lift=0;this.choosePorter();return;}phase=phases[p.phaseIndex];this.events.push({type:['rest','wipe','think'].includes(phase[0])?'rest':'shuffle'});}
         p.phase=phase[0];p.moving=p.phase==='walk'||p.phase==='return';const u=clamp(p.elapsed/phase[1],0,1),ease=u*u*(3-2*u),from=phases[Math.max(0,p.phaseIndex-1)][2];p.progress=from+(phase[2]-from)*ease;j.x=j.homeX+p.offset*p.progress;j.lift=p.moving?10+Math.sin(this.time*22)*1.5:p.phase==='lift'?u*10:p.phase==='home'?0:2;
       }
     }
@@ -78,7 +91,7 @@
     }
     end(won,reason='',failure=null){this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{state:this.state,collected:this.collected,total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{state:this.state,collected:this.collected,total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,rating,budgets};
 });
