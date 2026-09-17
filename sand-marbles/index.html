@@ -28,16 +28,16 @@
           <canvas id="game" width="560" height="760" aria-label="按住鼠标或手指划开沙土，让珠子落入同色罐子。">你的浏览器需要支持 Canvas 才能玩这个游戏。</canvas>
           <div class="board-caption"><span><i></i> <span id="board-instruction">按住并划动，挖出一条路</span></span><span id="collected">0 / 22</span></div>
           <div class="result-overlay" id="result" hidden>
-            <div class="result-card"><div class="result-symbol" id="result-symbol">✦</div><div id="result-stars" class="result-stars" hidden></div><p id="result-score" class="result-score"></p><span class="eyebrow" id="result-kicker">BEAUTIFULLY DONE</span><h2 id="result-title">每颗珠子，都到家了。</h2><p id="result-description">慢慢来，也能刚刚好。</p><button class="primary-button" id="result-action">下一关 <span>→</span></button><button class="text-button" id="result-replay">再玩一次</button></div>
+            <div class="result-card"><div class="result-symbol" id="result-symbol">✦</div><div id="result-stars" class="result-stars" hidden></div><p id="result-score" class="result-score"></p><span class="eyebrow" id="result-kicker">BEAUTIFULLY DONE</span><h2 id="result-title">每颗珠子，都到家了。</h2><p id="result-record" class="result-record"></p><p id="result-description">慢慢来，也能刚刚好。</p><button class="primary-button" id="result-action">下一关 <span>→</span></button><button class="text-button" id="result-review" hidden>查看失误位置</button><button class="text-button" id="result-replay">再玩一次</button></div>
           </div>
         </div>
-        <div class="game-bottom"><p id="status" role="status" aria-live="polite"><span class="status-dot"></span>不用着急，先想好珠子的路线。</p><div class="game-actions"><button id="restart"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg>重来</button></div></div>
+        <div class="game-bottom"><p id="status" role="status" aria-live="polite"><span class="status-dot"></span>不用着急，先想好珠子的路线。</p><div class="game-actions"><button id="return-result" hidden>查看结果</button><button id="restart"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg>重来</button></div></div>
       </section>
       <footer class="page-footer"><span><svg viewBox="0 0 20 20"><path d="m4 11 3 3 9-9M3 5v3m-1-1h3"/></svg>手指或鼠标划动 · 同色入罐</span><span>十五段沙径 · 挖得少，星更亮</span></footer>
     </main>
     <div class="edge-note">A LITTLE PAUSE, A LITTLE PLAY.</div>
   </div>
-  <dialog id="level-dialog" class="game-dialog"><div class="dialog-heading"><div><span class="eyebrow">YOUR LITTLE ADVENTURE</span><h2>十五段沙径</h2></div><button data-close="level-dialog" aria-label="关闭关卡选择">×</button></div><p>随时选关。星级只在本次打开期间保留，刷新重新开始。</p><div id="level-grid"></div></dialog>
+  <dialog id="level-dialog" class="game-dialog"><div class="dialog-heading"><div><span class="eyebrow">YOUR LITTLE ADVENTURE</span><h2>十五段沙径</h2></div><button data-close="level-dialog" aria-label="关闭关卡选择">×</button></div><p>随时选关。星级只在本次打开期间保留，刷新重新开始。</p><p id="session-summary" class="session-summary"></p><div id="level-grid"></div></dialog>
   <dialog id="rules-dialog" class="game-dialog"><div class="dialog-heading"><h2>地下探险手册</h2><button data-close="rules-dialog" aria-label="关闭玩法说明">×</button></div>
     <h3>挖得刚刚好，才有三颗星</h3><p>只有全部珠子进入同色罐子才评分。按本关显示的挖沙额度：不超过三星额度得 3 星，不超过二星额度得 2 星，其余通关得 1 星。失败没有星。</p><p id="rules-budget"></p><p>只计算你实际挖掉的沙。重复划过空洞、挖石块、蚯蚓挖的沙都不扣分；用时不计分。沙量按固定画布面积计量，与屏幕大小无关。</p>
     <h3>四种珠子，认纹路也认颜色</h3><div class="guide-grid"><p><b>● 玻璃珠</b>正常滚动，适合熟悉路线。</p><p><b>⊕ 重力珠</b>更沉、更大，转弯时需要稍宽的空间。</p><p><b>◎ 弹力珠</b>碰撞回弹更强，弯道需要余量。</p><p><b>✧ 轻盈珠</b>下降更慢，需要多一点耐心。</p></div>

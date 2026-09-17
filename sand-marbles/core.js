@@ -25,7 +25,7 @@
   function budgets(level){return {...level.budget};}
   const phases=[['lift',.8,0],['walk',1.4,.55],['rest',1.1,.55],['walk',1.5,1],['rest',1.3,1],['return',1.5,.5],['rest',.9,.5],['return',1.5,0],['home',2.5,0]];
   class World{
-    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=false;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,waiting:[],balls:[],flash:0}));this.porter=null;this.unloadClock=0;
+    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=false;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,waiting:[],balls:[],flash:0}));this.porter=null;this.unloadClock=0;this.transfers=[];this.failure=null;
       if(level.mechanics.porter)this.choosePorter();
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
       this.total=this.balls.length;
@@ -47,8 +47,10 @@
       }
     }
     receive(j,b){b.active=false;j.waiting.push(b);}
-    unload(dt){this.unloadClock+=dt;if(this.unloadClock<.075)return;this.unloadClock=0;
-      for(const j of this.jars){if(Math.abs(j.x-j.homeX)>9||!j.waiting.length)continue;const b=j.waiting.shift();j.balls.push(b.color);j.flash=1;this.collected++;this.events.push({type:'collect',x:j.homeX,color:b.color,count:this.collected});}
+    unload(dt){
+      for(const drop of this.transfers){drop.elapsed+=dt;if(drop.elapsed<drop.duration)continue;const j=drop.jar;j.balls.push(drop.ball.color);j.flash=1;this.collected++;this.events.push({type:'collect',x:j.x,color:drop.ball.color,count:this.collected});}
+      this.transfers=this.transfers.filter(drop=>drop.elapsed<drop.duration);
+      this.unloadClock+=dt;if(this.unloadClock>=.12){this.unloadClock=0;for(const j of this.jars){if(Math.abs(j.x-j.homeX)>9||!j.waiting.length)continue;this.transfers.push({ball:j.waiting.shift(),jar:j,elapsed:0,duration:.34});}}
       if(this.collected===this.total)this.end(true);
     }
     collide(b){
@@ -61,13 +63,13 @@
         b.vy=clamp(b.vy+gravity*dt,-220,390);b.vx=clamp(b.vx*.999,-180,180);b.x+=b.vx*dt;b.y+=b.vy*dt;this.collide(b);
       }
       for(let repeat=0;repeat<3;repeat++)for(let i=0;i<this.balls.length;i++){const a=this.balls[i];if(!a.active)continue;for(let j=i+1;j<this.balls.length;j++){const b=this.balls[j];if(!b.active)continue;let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=a.r+b.r)continue;if(d<.001){dx=.01;dy=.01;d=Math.hypot(dx,dy);}const nx=dx/d,ny=dy/d,overlap=a.r+b.r-d,ia=1/a.mass,ib=1/b.mass,inv=ia+ib;a.x-=nx*overlap*ia/inv;a.y-=ny*overlap*ia/inv;b.x+=nx*overlap*ib/inv;b.y+=ny*overlap*ib/inv;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-(1+Math.min(a.bounce,b.bounce))*relative/inv;a.vx-=impulse*nx*ia;a.vy-=impulse*ny*ia;b.vx+=impulse*nx*ib;b.vy+=impulse*ny*ib;}}this.collide(a);}
-      for(const b of this.balls){if(!b.active||b.y<582)continue;const j=this.jars.find(j=>Math.abs(j.homeX-b.x)<44);if(!j){this.end(false,'珠子漏过了罐口。把通道出口对准罐子再试试。');return;}if(j.color!==b.color){this.end(false,'珠子进入了不同颜色的罐子。留住两条路线之间的沙墙。');return;}this.receive(j,b);}
+      for(const b of this.balls){if(!b.active||b.y<582)continue;const j=this.jars.find(j=>Math.abs(j.homeX-b.x)<44);if(!j){this.end(false,'珠子错过了接珠盘。失误位置已圈出，可以查看本次路径。',{kind:'missed',x:b.x,y:b.y,color:b.color});return;}if(j.color!==b.color){this.end(false,'珠子进入了不同颜色的接珠盘。失误位置已圈出，可以查看本次路径。',{kind:'wrong-color',x:b.x,y:b.y,color:b.color,target:j.color,targetX:j.homeX});return;}this.receive(j,b);}
       this.unload(dt);
       for(const j of this.jars)j.flash=Math.max(0,j.flash-dt*2);
     }
-    end(won,reason=''){this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
+    end(won,reason='',failure=null){this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{state:this.state,collected:this.collected,total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,waiting:j.waiting.length,count:j.balls.length}))};}
+    snapshot(){return{state:this.state,collected:this.collected,total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,transfers:this.transfers.map(d=>({color:d.ball.color,progress:d.elapsed/d.duration,homeX:d.jar.homeX,x:d.jar.x})),porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,waiting:j.waiting.length,count:j.balls.length}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,rating,budgets};
 });
