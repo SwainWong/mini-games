@@ -35,7 +35,7 @@
   {
     "id": 2,
     "title": "高低两路",
-    "note": "划开沙土，让同色珠子回家。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "初识沙径",
     "difficulty": "入门",
     "jars": [
@@ -77,8 +77,14 @@
       }
     ],
     "tunnels": [],
-    "mechanics": {},
-    "features": [],
+    "mechanics": {
+      "rival": {
+        "speed": 10
+      }
+    },
+    "features": [
+      "rival"
+    ],
     "budget": {
       "three": 438,
       "two": 634
@@ -87,7 +93,7 @@
   {
     "id": 3,
     "title": "双泉汇流",
-    "note": "搬运工来帮倒忙了：整个罐子都会移动，瞄准正在停歇的罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -132,10 +138,14 @@
     ],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 10
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 386,
@@ -145,7 +155,7 @@
   {
     "id": 4,
     "title": "石岛回廊",
-    "note": "搬运工来帮倒忙了：整个罐子都会移动，瞄准正在停歇的罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -190,10 +200,14 @@
     ],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 10
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 337,
@@ -203,7 +217,7 @@
   {
     "id": 5,
     "title": "两岸连桥",
-    "note": "蚯蚓正在打洞，搬运工正在喘气。今天的地下可真热闹。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -257,11 +271,15 @@
           "depth": 20,
           "speed": 0.62
         }
-      ]
+      ],
+      "rival": {
+        "speed": 10
+      }
     },
     "features": [
       "porter",
-      "worm"
+      "worm",
+      "rival"
     ],
     "budget": {
       "three": 459,
@@ -271,7 +289,7 @@
   {
     "id": 6,
     "title": "三层峡谷",
-    "note": "罐子太重啦！小哥走走停停，珠子要落进此刻的同色罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -330,10 +348,14 @@
     ],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 11
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 560,
@@ -343,7 +365,7 @@
   {
     "id": 7,
     "title": "回旋长廊",
-    "note": "蚯蚓正在打洞，搬运工正在喘气。今天的地下可真热闹。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -399,11 +421,15 @@
           "depth": 20,
           "speed": 0.62
         }
-      ]
+      ],
+      "rival": {
+        "speed": 11
+      }
     },
     "features": [
       "porter",
-      "worm"
+      "worm",
+      "rival"
     ],
     "budget": {
       "three": 479,
@@ -413,7 +439,7 @@
   {
     "id": 8,
     "title": "斜切双谷",
-    "note": "罐子太重啦！小哥走走停停，珠子要落进此刻的同色罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -458,10 +484,14 @@
     ],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 11
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 466,
@@ -471,7 +501,7 @@
   {
     "id": 9,
     "title": "四叶错层",
-    "note": "罐子太重啦！小哥走走停停，珠子要落进此刻的同色罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -537,10 +567,14 @@
     "rocks": [],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 11
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 715,
@@ -550,7 +584,7 @@
   {
     "id": 10,
     "title": "断崖双泉",
-    "note": "罐子太重啦！小哥走走停停，珠子要落进此刻的同色罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -619,10 +653,14 @@
     ],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 11
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 545,
@@ -632,7 +670,7 @@
   {
     "id": 11,
     "title": "窄门分家",
-    "note": "蚯蚓正在打洞，搬运工正在喘气。今天的地下可真热闹。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -709,11 +747,15 @@
           "depth": 20,
           "speed": 0.62
         }
-      ]
+      ],
+      "rival": {
+        "speed": 12
+      }
     },
     "features": [
       "porter",
-      "worm"
+      "worm",
+      "rival"
     ],
     "budget": {
       "three": 629,
@@ -723,7 +765,7 @@
   {
     "id": 12,
     "title": "倒挂花园",
-    "note": "罐子太重啦！小哥走走停停，珠子要落进此刻的同色罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -796,10 +838,14 @@
     ],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 12
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 657,
@@ -809,7 +855,7 @@
   {
     "id": 13,
     "title": "地下回字湾",
-    "note": "蚯蚓正在打洞，搬运工正在喘气。今天的地下可真热闹。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -867,11 +913,15 @@
           "depth": 12,
           "speed": 0.62
         }
-      ]
+      ],
+      "rival": {
+        "speed": 12
+      }
     },
     "features": [
       "porter",
-      "worm"
+      "worm",
+      "rival"
     ],
     "budget": {
       "three": 552,
@@ -881,7 +931,7 @@
   {
     "id": 14,
     "title": "彩珠织巢",
-    "note": "罐子太重啦！小哥走走停停，珠子要落进此刻的同色罐口。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -974,10 +1024,14 @@
     ],
     "tunnels": [],
     "mechanics": {
-      "porter": true
+      "porter": true,
+      "rival": {
+        "speed": 12
+      }
     },
     "features": [
-      "porter"
+      "porter",
+      "rival"
     ],
     "budget": {
       "three": 805,
@@ -987,7 +1041,7 @@
   {
     "id": 15,
     "title": "搬运大乱斗",
-    "note": "蚯蚓正在打洞，搬运工正在喘气。今天的地下可真热闹。",
+    "note": "挖宝人盯上珠子了！赶在他挖到之前，把珠子送进同色罐子。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -1114,11 +1168,15 @@
           "depth": 20,
           "speed": 0.62
         }
-      ]
+      ],
+      "rival": {
+        "speed": 12
+      }
     },
     "features": [
       "porter",
-      "worm"
+      "worm",
+      "rival"
     ],
     "budget": {
       "three": 797,

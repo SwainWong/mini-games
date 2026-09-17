@@ -19,7 +19,7 @@
       const s=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();s.buffer=buffer;filter.type='lowpass';filter.frequency.value=frequency;gain.gain.value=volume;s.connect(filter);filter.connect(gain);gain.connect(c.destination);this.voices.add(s);s.onended=()=>{this.voices.delete(s);s.disconnect();filter.disconnect();gain.disconnect();};s.start();this.played++;
     }
     play(event,amount=0){
-      if(!this.enabled)return;const now=this.context.currentTime,interval={dig:.08,hit:.09,collect:.04,worm:.8}[event]||0;
+      if(!this.enabled)return;const now=this.context.currentTime,interval={dig:.08,hit:.09,collect:.04,worm:.8,'rival-dig':.32,danger:.75}[event]||0;
       if(now-(this.last[event]??-100)<interval)return;this.last[event]=now;
       if(event==='dig')this.noise(.075,2100,.035);
       else if(event==='hit')this.voice(550+Math.min(amount,180),.055,.013);
@@ -28,6 +28,8 @@
       else if(event==='lost'){this.voice(260,.2,.04);this.voice(195,.28,.035,.16);}
       else if(event==='shuffle')this.noise(.12,700,.025);
       else if(event==='rest'){this.voice(140,.16,.022,0,'triangle');this.voice(115,.22,.018,.17,'triangle');}
+      else if(event==='rival-dig')this.noise(.07,1300,.018);
+      else if(event==='danger'){this.voice(210,.07,.025,0,'triangle');this.voice(240,.07,.02,.13,'triangle');}
       else if(event==='worm')this.noise(.12,450,.022);
       else this.voice(660,.14,.035);
     }
