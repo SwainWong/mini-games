@@ -140,7 +140,7 @@ class Game{
   for(const t of op.tiles)t.y=Math.min(t.targetY,t.y+500*DT);
   if(op.tiles.every(t=>t.y>=t.targetY-.0001)){
    this.board=op.after;this.operation=null;this.recovery=null;
-   this.events.push({type:'land'},{type:'recovered'});this.checkCascade();
+   this.events.push({type:'land'},{type:'recovered'});this.checkCascade();this.checkOutcome();
   }
  }
  transportStep(){
@@ -159,7 +159,18 @@ class Game{
  checkCascade(){
   const hit=M.matches(this.board);
   if(hit.length)this.operation={kind:'cascade',started:this.time,after:[...this.board],matched:hit,valid:true,switched:true,blasted:false};
-  else if(M.remaining(this.board)&&!M.legal(this.board).length)this.events.push({type:'stalled'});
+
+ }
+ checkOutcome(){
+  if(this.state!=='playing'||this.hp<=0||this.operation||this.recovery||this.checkedBoard===this.board)return;
+  // Only a settled board is terminal. Pending automatic matches must finish
+  // before testing whether the player has any effective exchange left.
+  if(M.matches(this.board).length){this.checkCascade();return;}
+  this.checkedBoard=this.board;
+  const remaining=M.remaining(this.board);
+  if(remaining===0||M.legal(this.board).length===0){
+   this.state='won';this.reason=remaining?'no-moves':'cleared';this.rallyUntil=0;this.sourceEnabled=false;
+  }
  }
  hazard(){
   if(this.state!=='playing'||this.clearance>1e-6||this.time+1e-8<this.nextDamageAt)return;
@@ -211,7 +222,7 @@ class Game{
   if(this.clearance<0){s.x=BODY_WIDTH+SPIKE_X;s.vx=Math.max(0,s.vx);this.clearance=0;}
   this.finishConstraints();this.hazard();if(this.state==='lost')return;
   if(this.contactForce<s.resistance*.85&&this.clearance>12)this.safeTime+=DT;else this.safeTime=0;
-  if(!this.operation&&M.remaining(this.board)===0&&this.hp>0){this.state='won';this.rallyUntil=0;this.sourceEnabled=false;}
+  this.checkOutcome();
  }
  boxes(){
   const boxes=[G.PLATFORM,{x:this.shield.x-12,y:221,w:12,h:157}];if(this.level.beam)boxes.push(G.BEAM);

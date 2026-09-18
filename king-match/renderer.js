@@ -39,7 +39,7 @@ class Renderer{
   }c.restore();
   c.save();if(g.time<g.rallyUntil){c.shadowBlur=14;c.shadowColor='#ffd471';}this.sprite(4,g.shield.x-38,230,38,148);c.restore();
   if((g.state==='lost'&&t-this.hitAt<.7)||t-this.hurtAt<.45){const a=Math.max(0,1-(t-Math.max(this.hitAt,this.hurtAt))/.7);c.save();c.globalAlpha=a;c.shadowBlur=18;c.shadowColor='#ff8d66';c.strokeStyle='#ffe1bd';c.lineWidth=4;c.beginPath();c.arc(80,322,8+(1-a)*30,0,Math.PI*2);c.stroke();c.fillStyle='#ff725b55';c.fillRect(24,248,100,140);c.restore();if(g.time>=g.rallyUntil)this.label(g.hp?'小心！还撑得住':'撑不住了…',151,265,14,'#ffd1b0');}
-  this.label(g.state==='won'?'全部消除了，得救了！':g.time<g.rallyUntil?'高能爆发！顶回去！':g.clearance<25?'尖刺就在身后！':g.contactForce>45?'快开路，我在后退！':'交换三颗，帮我卸力！',Math.max(145,g.shield.x-75),247,10,'#f8e5ba');
+  this.label(g.state==='won'?(g.reason==='no-moves'?'过关了，得救了！':'全部消除了，得救了！'):g.time<g.rallyUntil?'高能爆发！顶回去！':g.clearance<25?'尖刺就在身后！':g.contactForce>45?'快开路，我在后退！':'交换三颗，帮我卸力！',Math.max(145,g.shield.x-75),247,10,'#f8e5ba');
 
   // A visible measuring line ties the HUD to the actual rear-to-spike distance.
   c.strokeStyle=g.clearance<25?'#ff8b71':'#d7bc81';c.lineWidth=1;c.setLineDash([3,3]);c.beginPath();c.moveTo(78,390);c.lineTo(Math.max(78,kx),390);c.stroke();c.setLineDash([]);
