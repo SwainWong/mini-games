@@ -146,3 +146,9 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 
 - `console-layers-v16.png`：image_gen 生成的1536×1024透明RGBA素材，左列为无轮盘的木铜底座，右列为独立六辐方向盘。提示词见 [console-layers-v16-prompt.md](console-layers-v16-prompt.md)。
 - 底座固定绘制，轮盘单独绕轴转动；使用v17人物层和实测手套握点对齐。受惊时也只切换人物，底座不随人物动作。此分层补充属于完整开发版，和已经发布的v17残影修复区分。
+
+## v16 通用坐下休息动作
+
+- `rival-rest-v16.png`：内置 image_gen 以现有盗宝人身份生成的12张完整姿势；屈膝、深蹲、坐下、擦汗、喝水、收瓶、起身。提示词见 [rival-rest-v16-prompt.md](rival-rest-v16-prompt.md)。不包含钻机、珠子或藏宝袋，兼容尚待选择的三种工具/拾取方案。
+- 实际1254×1254 RGBA，生成排布不是等高格子。`rival-rest.js` 使用实测人物边界、逐帧脚底锚点；坐姿不放大成站立高度，每帧只画一个人物，独立藏宝袋绘制一次。
+- 保留原体力恢复速度与休息时长，末段根据剩余恢复时间切换起身帧；晕眩和逃跑有各自的优先状态。

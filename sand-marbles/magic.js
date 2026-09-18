@@ -6,7 +6,7 @@
     constructor(w){this.w=w;this.queue=[];this.active=null;this.completed=[];this.scheduled=0;let seed=mixed(w.initialSeed);for(const t of w.treasures)if(t.kind==='bag'){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const u=seed/4294967296;t.outcome=u<.5?'coins20':u<.7?'coins40':u<.85?'bomb':'refill';}}
     get pending(){return !!this.active||this.queue.length>0||this.scheduled>0;}
     get pausesWorld(){return (this.active||this.queue[0])?.kind==='refill';}
-    get canScare(){return this.w.treasures.some(t=>t.kind==='bag'&&!t.opened)||[this.active,...this.queue].some(e=>e?.kind==='bomb'&&!e.applied);}
+    get canScare(){const r=this.w.rival,independentSpill=r&&!r.escaped&&r.bag.length&&(r.torn||r.bag.length>6||r.fleeing&&r.dropBag),freeTrigger=this.w.balls.some(b=>b.active)||this.w.droppedBags.some(b=>b.balls.length)||independentSpill;return freeTrigger&&this.w.treasures.some(t=>t.kind==='bag'&&!t.opened)||[this.active,...this.queue].some(e=>e?.kind==='bomb'&&!e.applied);}
     potential(){return this.w.treasures.filter(t=>!t.opened).reduce((n,t)=>n+(t.kind==='bag'?40:t.points||0),0);}
     open(t,b){if(t.opened||!b.active||this.w.time>this.w.timeLimit)return;t.opened=true;const kind=t.kind==='bag'?t.outcome:'fixed',points=kind==='coins20'?20:kind==='coins40'?40:kind==='fixed'?t.points||0:0;
       if(points){this.w.score+=points;this.w.events.push({type:'treasure',x:t.x,y:t.y,points});return;}

@@ -15,3 +15,23 @@ test('deadline freezes score contacts and actors but drains two pending effects 
 test('shareable initialization validates level and uint32 seed without unlocking gameplay',()=>{const M=require('../magic.js');a.deepEqual(M.parseStart('?level=8&seed=0'),{index:7,seed:0});a.deepEqual(M.parseStart('?level=15&seed=4294967295'),{index:14,seed:4294967295});for(const q of ['?level=16&seed=-1','?level=x&seed=abc','?level=0&seed=4294967296'])a.deepEqual(M.parseStart(q),{index:0,seed:undefined});const w=new World(base(),{seed:0});a.equal(w.snapshot().seed,0);a.equal(w.snapshot().version,16);});
 test('collection before or at bomb ignition keeps full value; later arrival earns waste value',()=>{for(const when of ['early','same','late']){const w=new World(base({targetScore:0,groups:[{x:280,y:100,color:'blue',count:1}],treasures:[{kind:'bag',x:280,y:590,points:20}]}),{seed:seedFor('bomb')});w.magic.open(w.treasures[0],w.balls[0]);w.magic.step(.898);Object.assign(w.balls[0],{x:280,y:when==='early'?589.9:when==='same'?590-(100+740*.002)*.002:589.6,vy:100});w.step();a.equal(w.score,when==='late'?3:10,when);}});
 test('all four bad-effect pairs drain in actual FIFO order with no duplicate events',()=>{for(const [seed,kinds]of [[34,['refill','refill']],[38,['refill','bomb']],[40,['bomb','bomb']],[85,['bomb','refill']]]){const w=new World(base({targetScore:0,treasures:[{kind:'bag',x:200,y:300},{kind:'bag',x:250,y:300}]}),{seed});a.deepEqual(w.treasures.map(t=>t.outcome),kinds);for(const t of w.treasures)w.magic.open(t,w.balls[0]);tick(w,4);a.deepEqual(w.magic.completed,[{id:0,kind:kinds[0]},{id:1,kind:kinds[1]}]);a.equal(w.magic.pending,false);a.ok(Math.abs(w.time-(4-kinds.filter(k=>k==='refill').length*1.8))<.009);}});
+test('an unopened magic bag cannot recover a small sealed thief sack when no free bead can trigger it',()=>{
+ for(const won of [false,true]){const w=new World(base({groups:[{x:150,y:150,color:'blue',count:6}],mechanics:{rival:{speed:20}},targetScore:won?20:50}),{seed:3});
+ for(const b of w.balls.slice(0,2))w.receive(w.jars[0],b);
+ for(const b of w.balls.slice(2)){w.rival.bag.push(b);w.resolveBead(b,'stolen');}
+ a.equal(w.rival.bag.length,4);a.equal(w.magic.canScare,false);a.equal(w.remainingPotential(),0);w.checkOutcome();a.equal(w.state,won?'won':'lost');a.equal(w.endCause,won?'exhausted':'unreachable');a.equal(w.time,0);
+ }
+});
+test('live trigger beads and already lit magic bombs preserve small-sack recovery potential',()=>{
+ const make=()=>new World(base({groups:[{x:150,y:150,color:'blue',count:6}],mechanics:{rival:{speed:20}},targetScore:50}),{seed:3});
+ const w=make();for(const b of w.balls.slice(0,4)){w.rival.bag.push(b);w.resolveBead(b,'stolen');}a.equal(w.magic.canScare,true);a.equal(w.recoverableBag().length,4);
+ w.magic.open(w.treasures[0],w.balls[4]);a.equal(w.treasures[0].outcome,'bomb');for(const b of w.balls.slice(4))w.resolveBead(b,'missed');a.equal(w.magic.canScare,true);a.equal(w.recoverableBag().length,4);w.checkOutcome();a.equal(w.state,'playing');
+ const dropped=make();for(const b of dropped.balls.slice(0,4)){dropped.rival.bag.push(b);dropped.resolveBead(b,'stolen');}const spill=dropped.balls[4];for(const b of dropped.balls.slice(4))dropped.resolveBead(b,'missed');dropped.droppedBags.push({x:100,y:100,balls:[spill],age:0});a.equal(dropped.magic.canScare,true);a.equal(dropped.recoverableBag().length,4);
+});
+test('independent future spills can trigger a magic bag to clear a cargo stone before scoring',()=>{
+ for(const release of ['torn','overloaded','drop']){const w=new World(base({groups:[{x:150,y:150,color:'blue',count:7}],mechanics:{rival:{speed:20}},targetScore:50,rocks:[{x:280,y:560,rx:40,ry:30}]}),{seed:3}),r=w.rival;
+ for(const b of w.balls){r.bag.push(b);w.resolveBead(b,'stolen');}if(release!=='overloaded')r.bag.splice(4);r.torn=release==='torn';r.fleeing=r.dropBag=release==='drop';
+ Object.assign(w.rocks[0],{phase:'cargo',carriers:[0],cartOffset:0,slotLoads:{0:w.jars[0].capacity}});a.equal(w.cargo.freeSlots(w.jars[0]),0);a.equal(w.magic.canScare,true,release);a.equal(w.remainingPotential(),r.bag.length*10+40,release);w.checkOutcome();a.equal(w.state,'playing',release);
+ r.escaped=true;a.equal(w.magic.canScare,false,release);a.equal(w.remainingPotential(),0,release);
+ }
+});
