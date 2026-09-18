@@ -33,7 +33,6 @@
     step(world,dt){
       this.age+=dt;const candidates=world.balls.filter(b=>b.active&&b.y<560);
       if(!candidates.length){this.phase='searching';this.target=null;this.danger='distant';this.distance=null;return;}
-      if(this.age<.8){this.phase='watching';return;}
       this.repath-=dt;if(this.repath<=0||(this.target&&(!this.target.active||this.target.y>=560))){
         const calm=candidates.filter(b=>Math.hypot(b.vx,b.vy)<70),choices=calm.length?calm:candidates;
         choices.sort((a,b)=>distance(this,a)-distance(this,b));this.target=null;this.path=[];
@@ -44,14 +43,15 @@
         const digging=world.terrain.solid(this.x+dx*34,this.y+dy*34);this.phase=digging?'digging':'running';
         const amount=Math.min(d,this.speed*(digging?1:1.85)*(0.72+Math.max(0,Math.sin(this.age*13))*.85)*dt);
         const nx=this.x+dx*amount,ny=this.y+dy*amount;if(this.clear(nx,ny)){this.x=nx;this.y=ny;}else this.repath=0;
-        this.removed+=world.terrain.dig(this.x+dx*12,this.y+dy*12,17,'rival');
+        const tip=this.toolPoint();this.removed+=world.terrain.dig(tip.x,tip.y,17,'rival');
       }else this.phase='searching';
       const nearest=candidates.reduce((a,b)=>distance(this,a)<distance(this,b)?a:b);this.distance=distance(this,nearest);
       this.danger=this.distance<58?'near':this.distance<115?'approaching':'distant';
       const caught=candidates.find(b=>this.canReach(this,b));
       if(caught){this.captured={x:caught.x,y:caught.y,color:caught.color};this.phase='caught';caught.active=false;caught.stolen=true;world.end(false,'盗宝人抢先挖到了珠子！下次要在他靠近前，把珠子送进罐子。',{kind:'stolen',x:caught.x,y:caught.y,color:caught.color});}
     }
-    snapshot(){return{x:this.x,y:this.y,phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
+    toolPoint(){return{x:this.x+this.fx*12,y:this.y+this.fy*12};}
+    snapshot(){return{x:this.x,y:this.y,tool:this.toolPoint(),phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
   }
   return Rival;
 });
