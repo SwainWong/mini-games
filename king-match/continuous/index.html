@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>国王消消乐 · 连续通关</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="layout"><aside><a class="back" href="../">← 单关版本</a><p class="eyebrow">THE KING'S PASSAGE</p><h1>消除一处。<br>走向下一关。</h1><p class="intro">同一股落石，既是危机，也是开门的力量。</p><ol><li><b>打开泄石口</b><span>交换相邻宝石，横竖三连。</span></li><li><b>积重，吊起门</b><span>石头落入配重斗，国王卸下压力。</span></li><li><b>穿过王室连廊</b><span>A、B 各自开门，存活抵达才过关。</span></li></ol><p class="note">连续关卡体验版<br>每段开始恢复 100 HP · 刷新从 A 开始</p></aside>
+<section class="game" aria-label="连续通关游戏"><header><div><span class="eyebrow">国王消消乐 / 连续旅程</span><h2 id="chapter">A · 王室金库</h2></div><nav aria-label="关卡进度"><span id="step-a" class="active">A</span><i></i><span id="step-b">B</span></nav></header>
+<div class="hud"><div><span>国王生命</span><strong id="hp">100 <small>HP</small></strong><progress id="health" max="100" value="100"></progress></div><div><span>配重斗</span><strong id="weight">0 / 43</strong><progress id="weight-bar" max="43" value="0"></progress></div><div><span>出口门</span><strong id="gate-status">等待积重</strong><small id="moves">0 次交换</small></div></div>
+<div class="scene"><canvas id="scene" width="720" height="1060" aria-label="交换相邻宝石，疏通唯一底口，积石抬门后前进" tabindex="0"></canvas><div id="loading" class="overlay"><div>正在点亮城堡…</div></div><div id="overlay" class="overlay" hidden><div class="dialog"><span id="overlay-kicker" class="eyebrow">第一段旅程</span><h3 id="overlay-title">帮国王打开身后的门</h3><p id="overlay-copy">底口堵着，落石就会把国王推向门刺。<br>先疏通宝石，再用石头的重量吊门。</p><button id="begin" class="primary">开始 A 关</button></div></div><div id="toast" role="status"></div></div>
+<p id="status" aria-live="polite">打开泄石口，让石头落入配重斗。</p>
+<button id="advance" class="primary advance" disabled>积重开门后，可以前进</button>
+<div class="controls"><button id="pause">暂停</button><button id="hint">提示</button><button id="remix">重排 2</button><button id="restart">本段重来</button><button id="help">玩法</button></div>
+</section></main>
+<dialog id="rules"><h2>一处消除，两种作用</h2><p>交换相邻宝石，横向或竖向连成至少三颗即可消除。现有宝石会下落，不补新宝石。</p><p>石头堆在盾前时，国王会被向门刺推挤，碰到后每次损失 12 HP。石头排入下方配重斗，门才会被吊起。无需清空全部宝石。</p><p>门升起锁定后点「前进」。国王会穿过连接段进入下一关，下一段由你点击开始。当前段重来只重置本段；刷新回到 A。</p><button id="close-help" class="primary">明白了</button></dialog>
+<script src="engine.js"></script><script src="renderer.js"></script><script src="game.js"></script></body></html>
