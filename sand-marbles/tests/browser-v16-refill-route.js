@@ -1,7 +1,8 @@
 async page=>{
+ const cacheSession=await page.context().newCDPSession(page);await cacheSession.send('Network.setCacheDisabled',{cacheDisabled:true});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewportSize({width:390,height:900});
- await page.goto('http://127.0.0.1:4208/sand-marbles/?level=12&seed=34',{waitUntil:'domcontentloaded'});
+ await page.goto('http://127.0.0.1:4208/sand-marbles/?level=12&seed=34&build=18',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>sandGame.snapshot().assetsReady);
  const cdp=await page.context().newCDPSession(page),state=()=>page.evaluate(()=>sandGame.snapshot());
  const base=[

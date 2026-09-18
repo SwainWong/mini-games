@@ -35,3 +35,12 @@ test('independent future spills can trigger a magic bag to clear a cargo stone b
  r.escaped=true;a.equal(w.magic.canScare,false,release);a.equal(w.remainingPotential(),0,release);
  }
 });
+
+test('refill resume cue waits until the dust clears and input is unlocked',()=>{
+ const w=opened('refill');tick(w,1.6);
+ a.equal(w.magic.active.applied,true);a.equal(w.inputLocked,true);
+ a.equal(w.events.filter(e=>e.type==='magic-refilled').length,0);
+ tick(w,.2);a.equal(w.inputLocked,false);
+ a.equal(w.events.filter(e=>e.type==='magic-refilled').length,1);
+ tick(w,.1);a.equal(w.events.filter(e=>e.type==='magic-refilled').length,1);
+});
