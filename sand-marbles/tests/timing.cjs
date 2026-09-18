@@ -232,7 +232,7 @@ module.exports={
       "ticks": 2
     },
     "1000": {
-      "delay": 0,
+      "delay": 1,
       "ticks": 2
     },
     "100000": {
@@ -254,10 +254,8 @@ module.exports={
       "stars": 3
     },
     "1000": {
-      "delay": 1.25,
-      "ticks": 2,
-      "score": 160,
-      "stars": 3
+      "delay": 1.5,
+      "ticks": 2
     },
     "100000": {
       "delay": 0,

@@ -60,7 +60,7 @@
       b.active=false;b.stolen=outcome==='stolen';this.losses[outcome]++;this.events.push({type:'loss',outcome,x:contact.x??b.x,y:contact.y??b.y,color:b.color});
       this.frameFailure={kind:outcome,x:contact.x??b.x,y:contact.y??b.y,r:b.r,material:b.type,color:b.color,...contact,ball:b};
     }
-    remainingPotential(){const active=this.balls.filter(b=>b.active);return active.reduce((sum,b)=>sum+(this.jars.some(j=>j.intact&&j.color===b.color)?10:0),0)+(active.length?this.treasures.filter(t=>!t.opened).reduce((sum,t)=>sum+t.points,0):0);}
+    remainingPotential(){const active=this.balls.filter(b=>b.active),recoverable=this.rival&&(this.rival.torn||this.rival.bag.length+active.length>6)?this.rival.bag:[];return [...active,...recoverable].reduce((sum,b)=>sum+(this.jars.some(j=>j.intact&&j.color===b.color)?10:0),0)+(active.length||recoverable.length?this.treasures.filter(t=>!t.opened).reduce((sum,t)=>sum+t.points,0):0);}
     queueInteraction(e){this.interactions.push({...e,u:Math.max(0,Math.min(1,e.u??1))});}
     resolveInteractions(){
       const priority={treasure:0,collect:1,damage:2,theft:3,loss:4,trigger:5};
@@ -78,7 +78,7 @@
       if(this.state!=='playing')return;
       const qualified=this.score>=this.targetScore,remaining=this.remainingPotential();
       // Passing the gate never stops the round; keep every remaining scoring opportunity.
-      if(qualified&&!this.balls.some(b=>b.active)){this.end(true,`珠子已全部结算。最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,null,'exhausted');return;}
+      if(qualified&&!this.balls.some(b=>b.active)&&!(this.rival?.bag.length&&(this.rival.torn||this.rival.bag.length>6))){this.end(true,`珠子已全部结算。最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,null,'exhausted');return;}
       if(settleDeadline&&this.time>=this.timeLimit){this.end(qualified,`时间到！最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,qualified?null:{kind:'timeout'},'timeout');return;}
       if(this.score+remaining>=this.targetScore)return;
       const f=this.frameFailure;if(f?.ball&&f.u!==undefined&&this.stepMouths)this.freezeCrossing(f.ball,f,this.stepMouths);
@@ -97,12 +97,12 @@
     }
     step(dt=STEP){
       if(this.state!=='playing')return;if(this.started){dt=Math.min(dt,this.timeRemaining);if(dt<=1e-9){this.time=this.timeLimit;this.checkOutcome();return;}}this.interactions=[];this.frameFailure=null;const mouths=this.jars.map(jarMouth);this.stepMouths=mouths;for(const b of this.balls){b.previousX=b.x;b.previousY=b.y;}if(this.started){this.time=Math.min(this.timeLimit,this.time+dt);if(this.timeLimit-this.time<1e-9)this.time=this.timeLimit;this.mechanisms(dt);this.hazards.step(dt);}
-      for(const b of this.balls){if(!b.active)continue;const gravity=b.gravity;
+      for(const b of this.balls){if(!b.active||b.held)continue;const gravity=b.gravity;
         b.vy=clamp(b.vy+gravity*dt,-220,390);b.vx=clamp(b.vx*.999,-180,180);b.x+=b.vx*dt;b.y+=b.vy*dt;this.collide(b);
       }
-      for(let repeat=0;repeat<3;repeat++)for(let i=0;i<this.balls.length;i++){const a=this.balls[i];if(!a.active)continue;for(let j=i+1;j<this.balls.length;j++){const b=this.balls[j];if(!b.active)continue;let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=a.r+b.r)continue;if(d<.001){dx=.01;dy=.01;d=Math.hypot(dx,dy);}const nx=dx/d,ny=dy/d,overlap=a.r+b.r-d,ia=1/a.mass,ib=1/b.mass,inv=ia+ib;a.x-=nx*overlap*ia/inv;a.y-=ny*overlap*ia/inv;b.x+=nx*overlap*ib/inv;b.y+=ny*overlap*ib/inv;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-(1+Math.min(a.bounce,b.bounce))*relative/inv;a.vx-=impulse*nx*ia;a.vy-=impulse*ny*ia;b.vx+=impulse*nx*ib;b.vy+=impulse*ny*ib;}}this.collide(a);}
+      for(let repeat=0;repeat<3;repeat++)for(let i=0;i<this.balls.length;i++){const a=this.balls[i];if(!a.active||a.held)continue;for(let j=i+1;j<this.balls.length;j++){const b=this.balls[j];if(!b.active||b.held)continue;let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=a.r+b.r)continue;if(d<.001){dx=.01;dy=.01;d=Math.hypot(dx,dy);}const nx=dx/d,ny=dy/d,overlap=a.r+b.r-d,ia=1/a.mass,ib=1/b.mass,inv=ia+ib;a.x-=nx*overlap*ia/inv;a.y-=ny*overlap*ia/inv;b.x+=nx*overlap*ib/inv;b.y+=ny*overlap*ib/inv;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-(1+Math.min(a.bounce,b.bounce))*relative/inv;a.vx-=impulse*nx*ia;a.vy-=impulse*ny*ia;b.vx+=impulse*nx*ib;b.vy+=impulse*ny*ib;}}this.collide(a);}
       for(const b of this.balls){
-        if(!b.active)continue;this.hazards.touchBead(b);let missed=null;
+        if(!b.active||b.held)continue;this.hazards.touchBead(b);let missed=null;
         for(let i=0;i<this.jars.length;i++){
           const j=this.jars[i],before=mouths[i],now=jarMouth(j),above=b.previousY-before.y,below=b.y-now.y;
           // Swept crossing in the moving mouth's frame, never the jar's home position.
@@ -124,7 +124,7 @@
     }
     end(won,reason='',failure=null,cause=null){this.endCause=cause;this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{...this.hazards.snapshot(),state:this.state,endCause:this.endCause,timeLimit:this.timeLimit,timeRemaining:Number(this.timeRemaining.toFixed(3)),qualified:this.score>=this.targetScore,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{...this.hazards.snapshot(),state:this.state,endCause:this.endCause,timeLimit:this.timeLimit,timeRemaining:Number(this.timeRemaining.toFixed(3)),qualified:this.score>=this.targetScore,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color,held:!!b.held})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,CART_MOUTH,rating,budgets};
 });

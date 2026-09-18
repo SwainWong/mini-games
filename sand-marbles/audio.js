@@ -26,6 +26,10 @@
       else if(event==='collect'){this.voice(520+(amount%8)*65,.18,.05);this.voice(1040+(amount%8)*130,.08,.012);}
       else if(event==='won')[523,659,784,1047].forEach((f,i)=>this.voice(f,.32,.05,i*.12));
       else if(event==='lost'){this.voice(260,.2,.04);this.voice(195,.28,.035,.16);}
+      else if(event==='cart-bump'){this.noise(.1,900,.035);this.voice(110,.1,.025,0,'triangle');}
+      else if(event==='stow')this.noise(.13,650,.022);
+      else if(event==='bag-torn')this.noise(.23,1900,.033);
+      else if(event==='spill')this.voice(850,.12,.025);
       else if(event==='shuffle')this.noise(.12,700,.025);
       else if(event==='rest'){this.voice(140,.16,.022,0,'triangle');this.voice(115,.22,.018,.17,'triangle');}
       else if(event==='rival-dig')this.noise(.07,1300,.018);
