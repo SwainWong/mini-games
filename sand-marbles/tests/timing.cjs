@@ -226,36 +226,48 @@ module.exports={
   },
   "12": {
     "1": {
-      "delay": 0.5,
-      "ticks": 1,
+      "delay": 0,
+      "ticks": 2,
       "order": [
         3,
-        0,
         1,
+        0,
         2
       ],
-      "score": 190,
-      "stars": 3
+      "maxStep": 8
     },
     "300": {
       "delay": 0,
-      "ticks": 2
-    },
-    "1000": {
-      "delay": 0.5,
-      "ticks": 1,
+      "ticks": 2,
       "order": [
         3,
-        0,
         1,
+        0,
         2
       ],
-      "score": 190,
-      "stars": 3
+      "maxStep": 8
+    },
+    "1000": {
+      "delay": 0,
+      "ticks": 2,
+      "order": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "maxStep": 8
     },
     "100000": {
       "delay": 0,
-      "ticks": 2
+      "ticks": 2,
+      "order": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "maxStep": 8
     }
   },
   "13": {

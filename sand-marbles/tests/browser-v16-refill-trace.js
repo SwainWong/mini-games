@@ -1,3 +1,5 @@
+// Historical diagnostic for the pre-redesign level-12 map; retained for failure provenance.
+// Current verification is browser-v16-refill-route.js. Do not run these coordinates against the new map.
 // Actual touch with measured world-time checkpoints. Diagnostic, not a winning-route claim.
 async page=>{
  await page.setViewportSize({width:390,height:900});await page.goto('http://127.0.0.1:4208/sand-marbles/?level=12&seed=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>sandGame.snapshot().assetsReady);await page.locator('#codex-confirm').click();await page.waitForTimeout(500);
