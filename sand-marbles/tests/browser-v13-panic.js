@@ -1,0 +1,11 @@
+async page=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));const attempts=[];
+ for(let trial=0;trial<5;trial++){
+ await page.reload();await page.setViewportSize({width:390,height:900});await page.waitForFunction(()=>sandGame.snapshot().assetsReady);await page.locator('#codex-confirm').click();await page.locator('#choose-level').click();await page.locator('[data-level="7"]').click();await page.locator('#codex-confirm').click();
+ await page.evaluate(()=>{window.panicTrace=[];window.panicObserver=setInterval(()=>{const s=sandGame.snapshot();panicTrace.push({time:s.time,operator:s.operator,rival:s.rival,jars:s.jars,state:s.state,score:s.score});},25);});
+ const box=await page.locator('#game').boundingBox(),point=p=>({x:box.x+p[0]/560*box.width,y:box.y+p[1]/760*box.height}),route=[[435,575],[450,410],[380,320],[280,240],[90,154],[90,120]],cdp=await page.context().newCDPSession(page);let p=point(route[0]);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});for(let i=1;i<route.length;i++)for(let k=1;k<=20;k++){const a=route[i-1],b=route[i];p=point([a[0]+(b[0]-a[0])*k/20,a[1]+(b[1]-a[1])*k/20]);await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[p]});await page.waitForTimeout(6);}await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await page.waitForFunction(()=>sandGame.snapshot().bombs[0].state==='spent',null,{timeout:15000});await page.waitForTimeout(1800);await page.screenshot({path:`output/playwright/v13-panic-${trial}.png`});await page.waitForTimeout(2600);
+ const trace=await page.evaluate(()=>{clearInterval(panicObserver);return panicTrace;});const gone=trace.find(s=>s.operator.phase==='gone'),last=trace.at(-1);if(!trace.some(s=>s.operator.phase==='scared'))throw Error('Explosion did not startle operator');const phases=[...new Set(trace.map(s=>s.rival.phase))];attempts.push({trial,operator:last.operator.phase,rivalPhases:phases,score:last.score});if(gone){const x=gone.jars.map(j=>j.x);if(trace.filter(s=>s.operator.phase==='gone').some(s=>s.jars.some((j,i)=>j.x!==x[i])))throw Error('Unmanned carts moved');await page.screenshot({path:'output/playwright/v13-empty-console.png'});break;}
+ }
+ if(errors.length)throw Error(errors.join(';'));return{attempts,errors};
+}

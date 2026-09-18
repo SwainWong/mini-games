@@ -1,5 +1,6 @@
 /* Shared deterministic terrain, scoring and physics. No DOM, network or persistence. */
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.SandCore=api;})(globalThis,()=>{
+  const G=typeof module==='object'?require('./rock-geometry.js'):globalThis.SandRock;
   'use strict';
   const Crew=typeof module==='object'?require('./cart-crew.js'):globalThis.SandCrew;
   const Hazards=typeof module==='object'?require('./hazards.js'):globalThis.SandHazards;
@@ -13,7 +14,7 @@
     constructor(rocks=[]){this.grid=new Uint8Array(GW*GH).fill(1);this.rockMask=new Uint8Array(GW*GH);this.playerCells=0;this.revision=0;this.changes=[];
       this.rebuildRockMask(rocks);
     }
-    rebuildRockMask(rocks){this.rockMask.fill(0);let changed=false;for(const r of rocks){if(r.broken)continue;for(let gy=Math.max(0,Math.floor((r.y-r.ry)/2));gy<Math.min(GH,(r.y+r.ry)/2);gy++)for(let gx=Math.max(0,Math.floor((r.x-r.rx)/2));gx<Math.min(GW,(r.x+r.rx)/2);gx++)if(((gx*2+1-r.x)/r.rx)**2+((gy*2+1-r.y)/r.ry)**2<=1){const i=gy*GW+gx;this.rockMask[i]=1;if(this.grid[i]){this.grid[i]=0;this.changes.push(i);changed=true;}}}if(changed)this.revision++;}
+    rebuildRockMask(rocks){this.rockMask.fill(0);let changed=false;for(const r of rocks){if(r.broken)continue;const e=G.extent(r);for(let gy=Math.max(0,Math.floor((r.y-e.y)/2));gy<Math.min(GH,(r.y+e.y)/2);gy++)for(let gx=Math.max(0,Math.floor((r.x-e.x)/2));gx<Math.min(GW,(r.x+e.x)/2);gx++)if(G.contains(r,gx*2+1,gy*2+1)){const i=gy*GW+gx;this.rockMask[i]=1;if(this.grid[i]){this.grid[i]=0;this.changes.push(i);changed=true;}}}if(changed)this.revision++;}
     sandSolid(x,y){if(x<0||x>=W||y<0)return true;if(y>=BOTTOM)return false;return this.grid[Math.floor(y/2)*GW+Math.floor(x/2)]===1;}
     solid(x,y){return this.sandSolid(x,y)||(x>=0&&x<W&&y>=0&&y<BOTTOM&&this.rockMask[Math.floor(y/2)*GW+Math.floor(x/2)]===1);}
     dig(x,y,r=24,source='player'){
@@ -32,7 +33,7 @@
   const CART_MOUTH=Object.freeze({y:590,halfWidth:46,halfHeight:7,rimWidth:3});
   const jarMouth=j=>({...CART_MOUTH,x:j.x,y:CART_MOUTH.y-j.lift});
   class World{
-    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.rocks=level.rocks.map((r,id)=>({...r,id,vy:0,warning:0,phase:'stable',broken:false}));this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.timeLimit=level.timeLimit??60;this.endCause=null;this.started=true;this.state='playing';this.reason='';this.collected=0;this.score=0;this.losses={'wrong-color':0,missed:0,stolen:0};this.interactions=[];this.frameFailure=null;this.treasures=(level.treasures||[]).map((t,i)=>({...t,id:i,r:t.r||16,opened:false}));this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,intact:true,balls:[],flash:0}));this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,alive:true,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
+    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){if(level.jars.length>4)throw new Error("At most 4 minecarts are allowed");this.droppedBags=[];this.level=level;this.seed=seed>>>0;this.rocks=level.rocks.map((r,id)=>({...r,id,angle:r.angle||0,omega:0,vx:0,vy:0,warning:0,phase:'stable',broken:false}));this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.timeLimit=level.timeLimit??60;this.endCause=null;this.started=true;this.state='playing';this.reason='';this.collected=0;this.score=0;this.losses={'wrong-color':0,missed:0,stolen:0};this.interactions=[];this.frameFailure=null;this.treasures=(level.treasures||[]).map((t,i)=>({...t,id:i,r:t.r||16,opened:false}));this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,intact:true,balls:[],flash:0}));this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,alive:true,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
       this.crew=new Crew(this);
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
       this.total=this.balls.length;this.targetScore=level.targetScore??this.total*10;this.rival=level.mechanics.rival?new Rival({...level,rocks:this.rocks},this.balls):null;this.hazards=new Hazards(this);
@@ -42,7 +43,7 @@
     get porter(){return this.porters?.[0]||null;}
     wormPoint(w){return{x:w.x,y:w.y};}
     moveWorm(w,dt){
-      const clear=(x,y)=>x>=20&&x<=W-20&&y>=80&&y<=BOTTOM-25&&this.rocks.filter(r=>!r.broken).every(r=>((x-r.x)/(r.rx+19))**2+((y-r.y)/(r.ry+19))**2>1);
+      const clear=(x,y)=>x>=20&&x<=W-20&&y>=80&&y<=BOTTOM-25&&this.rocks.filter(r=>!r.broken).every(r=>!G.contains(r,x,y,19));
       let x=w.x+w.vx*dt,y=w.y+w.vy*dt;
       if(x<w.homeX-w.range||x>w.homeX+w.range||!clear(x,w.y)){w.vx=-w.vx;x=w.x+w.vx*dt;}
       if(y<w.homeY-w.depth||y>w.homeY+w.depth||!clear(w.x,y)){w.vy=-w.vy;y=w.y+w.vy*dt;}
@@ -60,7 +61,8 @@
       b.active=false;b.stolen=outcome==='stolen';this.losses[outcome]++;this.events.push({type:'loss',outcome,x:contact.x??b.x,y:contact.y??b.y,color:b.color});
       this.frameFailure={kind:outcome,x:contact.x??b.x,y:contact.y??b.y,r:b.r,material:b.type,color:b.color,...contact,ball:b};
     }
-    remainingPotential(){const active=this.balls.filter(b=>b.active),recoverable=this.rival&&(this.rival.torn||this.rival.bag.length+active.length>6)?this.rival.bag:[];return [...active,...recoverable].reduce((sum,b)=>sum+(this.jars.some(j=>j.intact&&j.color===b.color)?10:0),0)+(active.length||recoverable.length?this.treasures.filter(t=>!t.opened).reduce((sum,t)=>sum+t.points,0):0);}
+    recoverableBag(){const r=this.rival;if(!r||r.escaped)return[];const active=this.balls.some(b=>b.active),bombChance=this.bombs.some(b=>b.state==='burning'||b.state==='idle'&&active);return r.torn||r.fleeing||bombChance||r.bag.length+this.balls.filter(b=>b.active).length>6?r.bag:[];}
+    remainingPotential(){const active=[...this.balls.filter(b=>b.active),...this.droppedBags.flatMap(b=>b.balls)],recoverable=this.recoverableBag();return [...active,...recoverable].reduce((sum,b)=>sum+(this.jars.some(j=>j.intact&&j.color===b.color)?10:0),0)+(active.length||recoverable.length?this.treasures.filter(t=>!t.opened).reduce((sum,t)=>sum+t.points,0):0);}
     queueInteraction(e){this.interactions.push({...e,u:Math.max(0,Math.min(1,e.u??1))});}
     resolveInteractions(){
       const priority={treasure:0,collect:1,damage:2,theft:3,loss:4,trigger:5};
@@ -78,7 +80,7 @@
       if(this.state!=='playing')return;
       const qualified=this.score>=this.targetScore,remaining=this.remainingPotential();
       // Passing the gate never stops the round; keep every remaining scoring opportunity.
-      if(qualified&&!this.balls.some(b=>b.active)&&!(this.rival?.bag.length&&(this.rival.torn||this.rival.bag.length>6))){this.end(true,`珠子已全部结算。最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,null,'exhausted');return;}
+      if(qualified&&!this.balls.some(b=>b.active)&&!this.recoverableBag().length&&!this.droppedBags.some(b=>b.balls.length)){this.end(true,`珠子已全部结算。最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,null,'exhausted');return;}
       if(settleDeadline&&this.time>=this.timeLimit){this.end(qualified,`时间到！最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,qualified?null:{kind:'timeout'},'timeout');return;}
       if(this.score+remaining>=this.targetScore)return;
       const f=this.frameFailure;if(f?.ball&&f.u!==undefined&&this.stepMouths)this.freezeCrossing(f.ball,f,this.stepMouths);
@@ -93,7 +95,8 @@
     }
     collide(b){
       for(let iteration=0;iteration<9;iteration++){let nx=0,ny=0,hits=0;for(const[dx,dy]of samples)if(this.terrain.solid(b.x+dx*b.r,b.y+dy*b.r)){nx-=dx;ny-=dy;hits++;}if(!hits)break;const n=Math.hypot(nx,ny);if(n<.01){b.y-=1;continue;}nx/=n;ny/=n;b.x+=nx*.8;b.y+=ny*.8;const vn=b.vx*nx+b.vy*ny;if(vn<0){if(vn<-90&&this.time-b.hitAt>.16){this.events.push({type:'hit',speed:-vn});b.hitAt=this.time;}b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}b.vx*=.985;}
-      for(const rock of this.rocks.filter(r=>!r.broken)){const dx=b.x-rock.x,dy=b.y-rock.y,rx=rock.rx+b.r,ry=rock.ry+b.r,d=Math.sqrt(dx*dx/(rx*rx)+dy*dy/(ry*ry));if(d<1){const angle=Math.atan2(dy/ry,dx/rx);b.x=rock.x+Math.cos(angle)*rx;b.y=rock.y+Math.sin(angle)*ry;let nx=Math.cos(angle)/rx,ny=Math.sin(angle)/ry;const n=Math.hypot(nx,ny);nx/=n;ny/=n;const vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}}}
+      for(const rock of this.rocks.filter(r=>!r.broken)){const p=G.local(rock,b.x,b.y),rx=rock.rx+b.r,ry=rock.ry+b.r,d=Math.hypot(p.x/rx,p.y/ry);if(d<1){const angle=Math.atan2(p.y/ry,p.x/rx),q=G.point(rock,Math.cos(angle)*rx,Math.sin(angle)*ry);b.x=q.x;b.y=q.y;const normal=G.point({...rock,x:0,y:0},Math.cos(angle)/rx,Math.sin(angle)/ry),n=Math.hypot(normal.x,normal.y),nx=normal.x/n,ny=normal.y/n,vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}}}
+
     }
     step(dt=STEP){
       if(this.state!=='playing')return;if(this.started){dt=Math.min(dt,this.timeRemaining);if(dt<=1e-9){this.time=this.timeLimit;this.checkOutcome();return;}}this.interactions=[];this.frameFailure=null;const mouths=this.jars.map(jarMouth);this.stepMouths=mouths;for(const b of this.balls){b.previousX=b.x;b.previousY=b.y;}if(this.started){this.time=Math.min(this.timeLimit,this.time+dt);if(this.timeLimit-this.time<1e-9)this.time=this.timeLimit;this.mechanisms(dt);this.hazards.step(dt);}
@@ -124,7 +127,7 @@
     }
     end(won,reason='',failure=null,cause=null){this.endCause=cause;this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{...this.hazards.snapshot(),state:this.state,endCause:this.endCause,timeLimit:this.timeLimit,timeRemaining:Number(this.timeRemaining.toFixed(3)),qualified:this.score>=this.targetScore,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color,held:!!b.held})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{operator:this.operator?{...this.operator}:null,droppedBags:this.droppedBags.map(b=>({x:b.x,y:b.y,count:b.balls.length,age:b.age})),...this.hazards.snapshot(),state:this.state,endCause:this.endCause,timeLimit:this.timeLimit,timeRemaining:Number(this.timeRemaining.toFixed(3)),qualified:this.score>=this.targetScore,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color,held:!!b.held})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,CART_MOUTH,rating,budgets};
 });

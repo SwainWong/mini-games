@@ -1,20 +1,21 @@
 /* A visible pursuer. Sand is diggable; rocks are never passable. No time-based loss. */
 (function(root,factory){const Rival=factory();if(typeof module==='object')module.exports=Rival;else root.SandRival=Rival;})(globalThis,()=>{
+  const G=typeof module==='object'?require('./rock-geometry.js'):globalThis.SandRock;
   const SIZE=16,COLS=35,ROWS=35,RADIUS=10;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   class Rival{
     constructor(level,balls){
-      this.bag=[];this.torn=false;this.movingSeconds=0;this.spillSeconds=0;this.pickup=null;this.digCycle=0;this.rocks=level.rocks;this.stamina=100;this.resting=false;this.restAge=0;this.stunTime=0;this.hearingCooldown=0;this.listenTime=0;this.sprint=0;this.bagTime=0;this.speed=level.mechanics.rival.speed;this.age=0;this.phase='watching';this.danger='distant';this.distance=null;this.target=null;this.path=[];this.repath=0;this.fx=1;this.fy=0;this.removed=0;this.captured=null;
+      this.fleeing=false;this.escaped=false;this.fearAge=0;this.dropBag=false;this.bag=[];this.torn=false;this.movingSeconds=0;this.spillSeconds=0;this.pickup=null;this.digCycle=0;this.rocks=level.rocks;this.stamina=100;this.resting=false;this.restAge=0;this.stunTime=0;this.hearingCooldown=0;this.listenTime=0;this.sprint=0;this.bagTime=0;this.speed=level.mechanics.rival.speed;this.age=0;this.phase='watching';this.danger='distant';this.distance=null;this.target=null;this.path=[];this.repath=0;this.fx=1;this.fy=0;this.removed=0;this.captured=null;
       const starts=[{x:48,y:76},{x:512,y:76}].filter(p=>this.clear(p.x,p.y));
       const initial=balls.filter(b=>b.active);starts.sort((a,b)=>Math.min(...initial.map(p=>distance(b,p)))-Math.min(...initial.map(p=>distance(a,p))));
       const start=starts[0]||{x:28,y:76};this.x=start.x;this.y=start.y;this.fx=start.x>280?-1:1;
       this.blocked=Array.from({length:COLS*ROWS},(_,i)=>!this.clear((i%COLS+.5)*SIZE,(Math.floor(i/COLS)+.5)*SIZE));
     }
-    clear(x,y){return x>=42&&x<=518&&y>=58&&y<=548&&this.rocks.filter(r=>!r.broken).every(r=>((x-r.x)/(r.rx+RADIUS+3))**2+((y-r.y)/(r.ry+RADIUS+3))**2>1);}
+    clear(x,y){return x>=42&&x<=518&&y>=58&&y<=548&&this.rocks.filter(r=>!r.broken).every(r=>!G.contains(r,x,y,RADIUS+3));}
     lineClear(a,b){const n=Math.ceil(distance(a,b)/4);for(let k=1;k<=n;k++)if(!this.clear(a.x+(b.x-a.x)*k/n,a.y+(b.y-a.y)*k/n))return false;return true;}
     canReach(from,ball){
       if(distance(from,ball)>=ball.r+18)return false;
-      const n=Math.max(1,Math.ceil(distance(from,ball)/3));for(let i=1;i<=n;i++){const x=from.x+(ball.x-from.x)*i/n,y=from.y+(ball.y-from.y)*i/n;if(this.rocks.filter(r=>!r.broken).some(r=>((x-r.x)/r.rx)**2+((y-r.y)/r.ry)**2<=1))return false;}return true;
+      const n=Math.max(1,Math.ceil(distance(from,ball)/3));for(let i=1;i<=n;i++){const x=from.x+(ball.x-from.x)*i/n,y=from.y+(ball.y-from.y)*i/n;if(this.rocks.filter(r=>!r.broken).some(r=>G.contains(r,x,y)))return false;}return true;
     }
     route(target){
       const reachPoint={x:Math.max(42,Math.min(518,target.x)),y:Math.max(58,Math.min(548,target.y))};
@@ -32,9 +33,25 @@
     }
     refreshObstacles(){this.blocked=Array.from({length:COLS*ROWS},(_,i)=>!this.clear((i%COLS+.5)*SIZE,(Math.floor(i/COLS)+.5)*SIZE));}
     stun(world,seconds=4){this.releaseHeld(world);this.pickup=null;this.stunTime=Math.max(this.stunTime,seconds);this.phase='stun';this.path=[];this.repath=0;this.listenTime=0;this.sprint=0;this.refreshObstacles();if(!this.clear(this.x,this.y)){let best=null,d=Infinity;for(let y=64;y<549;y+=8)for(let x=44;x<519;x+=8)if(this.clear(x,y)){const n=Math.hypot(x-this.x,y-this.y);if(n<d){d=n;best={x,y};}}if(best)Object.assign(this,best);}world.events.push({type:'stun',x:this.x,y:this.y});}
+    scare(world){if(this.escaped||this.fleeing)return;this.releaseHeld(world);this.pickup=null;this.fleeing=true;this.dropBag=world.random()<.5;this.fearAge=0;this.phase='scared';this.danger='distant';this.target=null;this.path=[];this.repath=0;world.events.push({type:'rival-scared',x:this.x,y:this.y});}
+    flee(world,dt){
+      this.fearAge+=dt;if(this.fearAge<.55){this.phase='scared';return;}
+      if(this.dropBag&&this.bag.length&&this.fearAge<1){this.phase='dropping';return;}
+      if(this.dropBag&&this.bag.length){const p=this.bagPoint();world.terrain.dig(p.x,p.y,24,'rival');world.droppedBags.push({...p,age:0,spill:0,balls:this.bag.splice(0)});world.events.push({type:'bag-dropped',...p});}
+      this.phase='fleeing';this.repath-=dt;
+      if(!this.exitPoint||this.repath<=0){this.refreshObstacles();const exits=[];for(const x of [44,516])for(let y=72;y<=536;y+=32){if(!this.clear(x,y))continue;const path=this.route({x,y});if(!path.length)continue;let length=0,last=this;for(const p of path){length+=distance(last,p);last=p;}exits.push({x,y,path,length});}exits.sort((a,b)=>a.length-b.length);const chosen=exits[0];if(chosen){this.exitPoint={x:chosen.x,y:chosen.y};this.path=chosen.path;}this.repath=.7;}
+      const old={x:this.x,y:this.y};let next=this.path[0];while(next&&distance(this,next)<1){this.path.shift();next=this.path[0];}
+      if(this.exitPoint&&distance(this,this.exitPoint)<3){this.atExit=true;this.exitSide=this.exitPoint.x<280?-1:1;}
+      if(this.atExit){this.fx=this.exitSide;this.fy=0;this.x+=this.exitSide*100*dt;this.removed+=world.terrain.dig(this.x+this.exitSide*18,this.y,23,'rival');if(this.x<-45||this.x>605){this.escaped=true;this.phase='escaped';this.bag.length=0;world.events.push({type:'rival-escaped',x:this.x,y:this.y});}}
+      else if(next){const d=distance(this,next),speed=110/Math.sqrt(1+this.bag.length*.11),amount=Math.min(d,speed*dt),dx=(next.x-this.x)/d,dy=(next.y-this.y)/d;this.fx=dx;this.fy=dy;this.fleeDigging=world.terrain.solid(this.x+dx*26,this.y+dy*26);this.digCycle=(this.digCycle+dt*3)%1;if(this.clear(this.x+dx*amount,this.y+dy*amount)){this.x+=dx*amount;this.y+=dy*amount;this.removed+=world.terrain.dig(this.x+dx*20,this.y+dy*20,24,'rival');}else this.repath=0;this.stamina=Math.max(0,this.stamina-dt*12*(1+this.bag.length*.11));}
+      if(!this.escaped)this.moveBag(world,dt,distance(old,this));
+    }
     step(world,dt){
+      if(this.escaped)return;
+
       this.age+=dt;this.hearingCooldown=Math.max(0,this.hearingCooldown-dt);this.sprint=Math.max(0,this.sprint-dt);
       if(this.stunTime>0){this.stunTime=Math.max(0,this.stunTime-dt);this.phase='stun';return;}
+      if(this.fleeing){this.flee(world,dt);return;}
       if(this.pickup){this.stepPickup(world,dt);return;}
       if(this.stamina<=20&&!this.resting){this.resting=true;this.restAge=0;this.listenTime=0;this.sprint=0;}
       if(this.resting){this.restAge+=dt;this.stamina=Math.min(100,this.stamina+26*dt);this.phase=this.restAge<.7?'wipe':this.restAge<1.5?'drink':'rest';if(this.restAge>=2&&this.stamina>=85){this.resting=false;this.repath=0;}return;}
@@ -67,7 +84,7 @@
       if(!b.active||(!b.held&&!this.canReach(this,b))){this.releaseHeld(world);this.pickup=null;this.repath=0;this.phase='searching';return;}
       this.phase=p.age<.28?'reach':p.age<.6?'lifting':'bagging';
       if(p.age>=.28&&!b.held){p.start={x:b.x,y:b.y};b.held=true;this.captured={x:b.x,y:b.y,color:b.color};}
-      if(b.held){const point=this.heldPoint(),steps=Math.max(1,Math.ceil(distance(b,point)/2));for(let i=1;i<=steps;i++){const x=b.x+(point.x-b.x)*i/steps,y=b.y+(point.y-b.y)*i/steps;if(this.rocks.some(r=>!r.broken&&((x-r.x)/(r.rx+b.r))**2+((y-r.y)/(r.ry+b.r))**2<1)){this.releaseHeld(world);this.pickup=null;this.phase='searching';this.repath=0;return;}}Object.assign(b,point,{vx:0,vy:0});}
+      if(b.held){const point=this.heldPoint(),steps=Math.max(1,Math.ceil(distance(b,point)/2));for(let i=1;i<=steps;i++){const x=b.x+(point.x-b.x)*i/steps,y=b.y+(point.y-b.y)*i/steps;if(this.rocks.some(r=>!r.broken&&G.contains(r,x,y,b.r))){this.releaseHeld(world);this.pickup=null;this.phase='searching';this.repath=0;return;}}Object.assign(b,point,{vx:0,vy:0});}
       this.stamina=Math.max(0,this.stamina-dt*(4+this.bag.length*.5));
       if(p.age>=1)world.queueInteraction({u:1,kind:'theft',apply:()=>{if(this.pickup!==p||this.stunTime>0||!b.active)return;b.held=false;this.bag.push(b);this.pickup=null;this.repath=0;world.resolveBead(b,'stolen');world.events.push({type:'stow',...this.bagPoint()});}});
     }
@@ -75,8 +92,8 @@
       if(!this.torn&&this.bag.length>6){this.movingSeconds+=dt;while(this.movingSeconds>=1){this.movingSeconds-=1;if(world.random()<.05){this.torn=true;world.events.push({type:'bag-torn',...this.bagPoint()});break;}}}else if(!this.torn)this.movingSeconds=0;
       if(this.torn&&this.bag.length){this.spillSeconds+=dt;while(this.spillSeconds>=.75&&this.bag.length){this.spillSeconds-=.75;const b=this.bag.pop(),p=this.bagPoint();if(!this.clear(p.x,p.y))Object.assign(p,{x:this.x,y:this.y});world.terrain.dig(p.x,p.y,b.r+6,'rival');Object.assign(b,p,{previousX:p.x,previousY:p.y,active:true,held:false,stolen:false,vx:-(this.fx<0?-1:1)*25,vy:35,theftImmuneUntil:(world.time??this.age)+2});world.losses.stolen=Math.max(0,world.losses.stolen-1);world.events.push({type:'spill',...p,color:b.color});}}
     }
-    toolPoint(){const dir=this.fx<0?-1:1,t=this.digCycle;if(this.phase!=='digging')return{x:this.x+this.fx*20,y:this.y+this.fy*20};const swing=Math.sin(t*Math.PI*2);return{x:this.x+dir*(24-16*swing),y:this.y+this.fy*12-22*Math.max(0,swing)+7*Math.max(0,-swing)};}
-    snapshot(){return{bagCount:this.bag.length,bagScale:this.bagScale,torn:this.torn,digCycle:this.digCycle,pickup:this.pickup?{age:this.pickup.age,color:this.pickup.ball.color,held:!!this.pickup.ball.held,point:this.heldPoint()}:null,stamina:this.stamina,stunTime:this.stunTime,sprint:this.sprint,resting:this.resting,x:this.x,y:this.y,tool:this.toolPoint(),phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
+    toolPoint(){const dir=this.fx<0?-1:1,t=this.digCycle;if(this.phase!=='digging'&&!(this.phase==='fleeing'&&this.fleeDigging))return{x:this.x+this.fx*20,y:this.y+this.fy*20};const swing=Math.sin(t*Math.PI*2);return{x:this.x+dir*(24-16*swing),y:this.y+this.fy*12-22*Math.max(0,swing)+7*Math.max(0,-swing)};}
+    snapshot(){return{fleeDigging:!!this.fleeDigging,escaped:this.escaped,fleeing:this.fleeing,dropBag:this.dropBag,fearAge:this.fearAge,bagCount:this.bag.length,bagScale:this.bagScale,torn:this.torn,digCycle:this.digCycle,pickup:this.pickup?{age:this.pickup.age,color:this.pickup.ball.color,held:!!this.pickup.ball.held,point:this.heldPoint()}:null,stamina:this.stamina,stunTime:this.stunTime,sprint:this.sprint,resting:this.resting,x:this.x,y:this.y,tool:this.toolPoint(),phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
   }
   return Rival;
 });

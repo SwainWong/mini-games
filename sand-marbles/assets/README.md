@@ -107,3 +107,10 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 ### 挖宝人图集
 
 Use case: stylized-concept, game production sprite asset. Image 1 is style and character reference only. New sprite sheet with genuinely transparent alpha background, landscape 1536x1024. Exactly four full-body poses in even 2 by 2 grid, with transparent margins. Same mischievous character: plum hood, explorer goggles, red scarf, oversized bulging tan treasure sack on back, dark gloves, chunky boots. Front three-quarter facing right. Top-left shovel raised, top-right leaning and thrusting shovel down into invisible sand, bottom-left running fast with shovel and sack bouncing, bottom-right smug cheer clutching small glowing orange marble with sack open. Polished soft clay/cartoon shading, saturated plum/tan/red, crisp silhouettes readable at 80px. No background, sand, shadows, borders, labels or text.
+
+## v13 失衡与惊吓
+
+通过内置 Image 生成并保留原始透明 PNG：
+- `operator-v13.png`：3×2 图集，双摇杆操作、受惊、退后、两步逃跑；脚下控制台不会随人逃走。提示词：`operator-v13-prompt.md`。
+- `panic-blast-v13.png`：4×2 图集，上排为盗宝人惊吓、弃袋、两步逃跑；下排初版爆炸未采用（上下格有轻微串图）。提示词：`panic-blast-v13-prompt.md`。
+- `blast-v13.png`：独立 4×1 爆炸图集，闪光、火球、烟团、消散；实际效果在同一个爆点播放，不改变逻辑伤害范围。提示词：`blast-v13-prompt.md`。
