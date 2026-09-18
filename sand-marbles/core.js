@@ -26,24 +26,25 @@
   function budgets(level){return {...level.budget};}
   const jarMouth=j=>({x:j.x,y:590-j.lift,halfWidth:46});
   class World{
-    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=false;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
+    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=true;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
       if(level.mechanics.porter)this.choosePorter();
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
       this.total=this.balls.length;this.rival=level.mechanics.rival?new Rival(level,this.balls):null;
     }
-    dig(a,b,r=24){if(this.state!=='playing')return 0;this.started=true;return this.terrain.line(a,b,r);}
+    dig(a,b,r=24){if(this.state!=='playing')return 0;return this.terrain.line(a,b,r);}
     random(){this.seed=(Math.imul(this.seed,1664525)+1013904223)>>>0;return this.seed/4294967296;}
     choosePorter(){
-      const previous=this.porter?.jar;let choices=this.jars.map((_,i)=>i).filter(i=>this.jars.length===1||i!==previous);const index=choices[Math.floor(this.random()*choices.length)],jar=this.jars[index];
+      // One worker is assigned to a random cart for the level; keep the grip continuous across trips.
+      const index=this.porter?.jar??Math.floor(this.random()*this.jars.length),jar=this.jars[index];
       const left=Math.max(104,...this.jars.filter(j=>j.homeX<jar.homeX).map(j=>j.homeX+96)),right=Math.min(W-104,...this.jars.filter(j=>j.homeX>jar.homeX).map(j=>j.homeX-96));
       const reach=this.level.mechanics.porterRange||90,direction=this.random()<.5?-1:1;let offset=direction*Math.min(reach,direction<0?jar.homeX-left:right-jar.homeX);if(Math.abs(offset)<12)offset=-direction*Math.min(reach,direction<0?right-jar.homeX:jar.homeX-left);
       // Every trip has bounded but different strides and readable pauses. No teleporting jar.
       const stride=.42+this.random()*.25,short=.35+this.random()*.3;
       const pause=()=>.35+this.random()*.3,walk=()=>.3+this.random()*.22;
-      const phases=[['lift',.28,0],['walk',walk(),stride],['rest',pause(),stride],['walk',walk(),1],
+      const phases=[['grip',.28,0],['walk',walk(),stride],['rest',pause(),stride],['walk',walk(),1],
         [this.random()<.5?'wipe':'think',.65+this.random()*.3,1],['return',walk(),short],
         [this.random()<.5?'think':'rest',pause(),short],['return',walk(),0],['home',4.2+this.random()*1.2,0]];
-      this.porter={jar:index,phase:'lift',phaseIndex:0,elapsed:0,offset,progress:0,moving:false,phases};this.effects.porterTrips++;
+      this.porter={jar:index,phase:'grip',phaseIndex:0,elapsed:0,offset,progress:0,moving:false,phases};this.effects.porterTrips++;
     }
     wormPoint(w){return{x:w.x,y:w.y};}
     moveWorm(w,dt){
@@ -52,13 +53,13 @@
       if(x<w.homeX-w.range||x>w.homeX+w.range||!clear(x,w.y)){w.vx=-w.vx;x=w.x+w.vx*dt;}
       if(y<w.homeY-w.depth||y>w.homeY+w.depth||!clear(w.x,y)){w.vy=-w.vy;y=w.y+w.vy*dt;}
       if(!clear(x,y)){w.vx=-w.vx;w.vy=-w.vy;x=w.x+w.vx*dt;y=w.y+w.vy*dt;}
-      if(clear(x,y)){this.effects.wormCells+=this.terrain.line([w.x,w.y],[x,y],17,'worm');w.x=x;w.y=y;}
+      if(clear(x,y)){const removed=this.terrain.line([w.x,w.y],[x,y],17,'worm');w.dug=(w.dug||0)+removed;this.effects.wormCells+=removed;w.x=x;w.y=y;}
     }
     mechanisms(dt){
       for(const w of this.worms)this.moveWorm(w,dt);
       if(this.porter){const p=this.porter,j=this.jars[p.jar],phases=p.phases;p.elapsed+=dt;let phase=phases[p.phaseIndex];
         if(p.elapsed>=phase[1]){p.elapsed-=phase[1];p.phaseIndex++;if(p.phaseIndex===phases.length){j.x=j.homeX;j.lift=0;this.choosePorter();return;}phase=phases[p.phaseIndex];this.events.push({type:['rest','wipe','think'].includes(phase[0])?'rest':'shuffle'});}
-        p.phase=phase[0];p.moving=p.phase==='walk'||p.phase==='return';const u=clamp(p.elapsed/phase[1],0,1),ease=u*u*(3-2*u),from=phases[Math.max(0,p.phaseIndex-1)][2];p.progress=from+(phase[2]-from)*ease;j.x=j.homeX+p.offset*p.progress;j.lift=p.moving?10+Math.sin(this.time*22)*1.5:p.phase==='lift'?u*10:p.phase==='home'?0:2;
+        p.phase=phase[0];p.moving=p.phase==='walk'||p.phase==='return';const u=clamp(p.elapsed/phase[1],0,1),ease=u*u*(3-2*u),from=phases[Math.max(0,p.phaseIndex-1)][2];p.progress=from+(phase[2]-from)*ease;j.x=j.homeX+p.offset*p.progress;j.lift=0;
       }
     }
     receive(j,b){b.active=false;j.balls.push(b.color);j.flash=1;this.collected++;this.events.push({type:'collect',x:j.x,y:jarMouth(j).y,color:b.color,count:this.collected});}
@@ -80,10 +81,10 @@
           if(above>0||below<0||below<=above)continue;
           const u=-above/(below-above),x=b.previousX+(b.x-b.previousX)*u,mouthX=before.x+(now.x-before.x)*u;
           if(Math.abs(x-mouthX)>now.halfWidth-b.r)continue;
-          if(j.color!==b.color){this.end(false,'珠子落入了不同颜色的罐子。失误位置已圈出，可以查看本次路径。',{kind:'wrong-color',x:b.x,y:b.y,color:b.color,target:j.color,targetX:j.x,targetY:now.y});return;}
+          if(j.color!==b.color){this.end(false,'珠子落入了不同颜色的矿车。失误位置已圈出，可以查看本次路径。',{kind:'wrong-color',x:b.x,y:b.y,color:b.color,target:j.color,targetX:j.x,targetY:now.y});return;}
           this.receive(j,b);break;
         }
-        if(b.active&&b.y>620){this.end(false,'珠子错过了罐口。罐子会移动，留意它停下的位置和时机。',{kind:'missed',x:b.x,y:b.y,color:b.color});return;}
+        if(b.active&&b.y>620){this.end(false,'珠子错过了车斗开口。矿车会移动，留意它停下的位置和时机。',{kind:'missed',x:b.x,y:b.y,color:b.color});return;}
       }
       if(this.collected===this.total)this.end(true);
       else if(this.started&&this.rival){this.rival.step(this,dt);if(this.state!=='playing')return;}

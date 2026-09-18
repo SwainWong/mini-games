@@ -21,7 +21,7 @@
     play(event,amount=0){
       if(!this.enabled)return;const now=this.context.currentTime,interval={dig:.08,hit:.09,collect:.04,worm:.8,'rival-dig':.32,danger:.75}[event]||0;
       if(now-(this.last[event]??-100)<interval)return;this.last[event]=now;
-      if(event==='dig')this.noise(.075,2100,.035);
+      if(event==='dig'){this.noise(.12,1400,.035);this.noise(.045,4200,.012);}
       else if(event==='hit')this.voice(550+Math.min(amount,180),.055,.013);
       else if(event==='collect'){this.voice(520+(amount%8)*65,.18,.05);this.voice(1040+(amount%8)*130,.08,.012);}
       else if(event==='won')[523,659,784,1047].forEach((f,i)=>this.voice(f,.32,.05,i*.12));
