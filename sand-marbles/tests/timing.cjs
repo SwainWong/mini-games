@@ -226,9 +226,15 @@ module.exports={
   },
   "12": {
     "1": {
-      "delay": 0.25,
+      "delay": 0.5,
       "ticks": 1,
-      "score": 170,
+      "order": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "score": 190,
       "stars": 3
     },
     "300": {
@@ -236,8 +242,16 @@ module.exports={
       "ticks": 2
     },
     "1000": {
-      "delay": 1,
-      "ticks": 2
+      "delay": 0.5,
+      "ticks": 1,
+      "order": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "score": 190,
+      "stars": 3
     },
     "100000": {
       "delay": 0,

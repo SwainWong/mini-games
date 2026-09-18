@@ -3,7 +3,7 @@
   // A single source frame per draw. Never blend two silhouettes.
   class OperatorAnimation {
     constructor(){this.reset();}
-    reset(){this.time=null;this.frame=5;this.turn=5;this.credit=0;this.jar=null;this.pending=null;this.gesture=null;}
+    reset(){this.time=null;this.wheelAngle=0;this.frame=5;this.turn=5;this.credit=0;this.jar=null;this.pending=null;this.gesture=null;}
     update(o,time){
       if(this.time!==null&&time<this.time)this.reset();
       const dt=this.time===null?0:Math.max(0,Math.min(.1,time-this.time));this.time=time;
@@ -14,6 +14,7 @@
       }
       // Return the hands to neutral before letting one hand leave the wheel.
       const target=this.pending!==null||this.gesture?5:Math.round(5+Math.max(-1,Math.min(1,o.steering||0))*5);
+      const desiredAngle=(5-target)*.14;this.wheelAngle+=Math.max(-dt*2.2,Math.min(dt*2.2,desiredAngle-this.wheelAngle));
       this.credit=Math.min(1,this.credit+dt*16);
       if(this.turn!==target&&this.credit>=1){this.turn+=Math.sign(target-this.turn);this.credit-=1;}
       if(this.pending!==null&&this.turn===5&&!this.gesture){this.gesture={base:this.pending,age:0};this.pending=null;}

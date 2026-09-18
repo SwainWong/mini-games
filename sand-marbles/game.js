@@ -9,8 +9,8 @@
   const soil=document.createElement('canvas'),texture=document.createElement('canvas'),earth=document.createElement('canvas');soil.width=texture.width=earth.width=W;soil.height=texture.height=SOIL_BOTTOM;earth.height=H;
   const wall=document.createElement('canvas');wall.width=W;wall.height=SOIL_BOTTOM+12;const wc=wall.getContext('2d');let wallRevision=-1;
   const sc=soil.getContext('2d'),tc=texture.getContext('2d'),ec=earth.getContext('2d'),sound=new SandAudio(),best=new Map(),bestSand=new Map(),bestScores=new Map();
-  const art={magic:new Image(),porter:new Image(),rival:new Image(),props:new Image(),cart:new Image(),actions:new Image(),loot:new Image(),motion:new Image(),bomb:new Image(),operator:new Image(),panic:new Image(),blast:new Image(),wheel:new Image(),controls:new Image(),operatorComplete:new Image()};let assetsReady=false;
-  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=name==='magic'?'assets/magic-kit-v16.png':name==='operatorComplete'?'assets/operator-actor-v17.png':name==='wheel'?'assets/operator-wheel-v14.png':name==='controls'?'assets/control-props-v14.png':name==='blast'?'assets/blast-v13.png':name==='operator'?'assets/operator-v13.png':name==='panic'?'assets/panic-blast-v13.png':name==='motion'?'assets/rival-motion-v12.png':name==='bomb'?'assets/bomb-kit-v12.png':name==='actions'?'assets/rival-actions-v10.png':name==='loot'?'assets/mining-props-v10.png':`assets/${name}-${name==='props'?'v7':'v8'}.png`;})));
+  const art={console:new Image(),magic:new Image(),porter:new Image(),rival:new Image(),props:new Image(),cart:new Image(),actions:new Image(),loot:new Image(),motion:new Image(),bomb:new Image(),operator:new Image(),panic:new Image(),blast:new Image(),wheel:new Image(),controls:new Image(),operatorComplete:new Image()};let assetsReady=false;
+  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=name==='console'?'assets/console-layers-v16.png':name==='magic'?'assets/magic-kit-v16.png':name==='operatorComplete'?'assets/operator-actor-v17.png':name==='wheel'?'assets/operator-wheel-v14.png':name==='controls'?'assets/control-props-v14.png':name==='blast'?'assets/blast-v13.png':name==='operator'?'assets/operator-v13.png':name==='panic'?'assets/panic-blast-v13.png':name==='motion'?'assets/rival-motion-v12.png':name==='bomb'?'assets/bomb-kit-v12.png':name==='actions'?'assets/rival-actions-v10.png':name==='loot'?'assets/mining-props-v10.png':`assets/${name}-${name==='props'?'v7':'v8'}.png`;})));
   const sessionSeen=new Set();let pendingIntro=[],floaters=[],bursts=[];
   let world,current=0,brush=20,speech='',speechUntil=0,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],dust=[],rivalDust=0,wormDust=new Map(),seed=42,lastHud='',finished=false,motionCheck=0,stillFor=0,motionPositions=[];
   function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
@@ -46,6 +46,7 @@
     }
   }
   function load(index){
+    operatorAnimation.reset();
     releasePointer();current=index;if(!roundSeeds.has(index))roundSeeds.set(index,entry.seed??Math.floor(Math.random()*4294967296));world=new World(levels[index],{seed:roundSeeds.get(index)});finished=false;speech='';speechUntil=0;cursor=null;particles=[];floaters=[];bursts=[];dust=[];rivalDust=0;wormDust.clear();accumulator=0;lastHud='';motionCheck=0;stillFor=0;motionPositions=[];
     makeTextures();$('#level-number').textContent=String(index+1).padStart(2,'0');$('#level-title').textContent=levels[index].title;$('#difficulty').textContent=levels[index].difficulty;
     $('#result').hidden=true;$('#result-stars').hidden=true;$('#return-result').hidden=true;$('#rules-budget').textContent=`本关：三星 ≤ ${world.budget.three} 沙量；二星 ≤ ${world.budget.two} 沙量。`;
@@ -154,7 +155,12 @@
       ctx.font='bold 8px sans-serif';ctx.textAlign='right';ctx.fillStyle=lit?colors[color].dark:'#92683f';ctx.fillText(colors[color].label,x-12,cy+3);
     }
   }
-  function emptyConsole(){atlasSprite(art.controls,3,2,0,440,691,80,94);}
+  function emptyConsole(){
+    // The plinth never translates or rotates. Only the isolated wheel layer turns.
+    ctx.drawImage(art.console,0,0,768,1024,411.6,653.3,76.8,102.4);
+    ctx.save();ctx.translate(450,673);ctx.scale(1,.88);ctx.rotate(operatorAnimation.wheelAngle);
+    ctx.drawImage(art.console,809,145,684,680,-24,-24,48,48);ctx.restore();
+  }
   function porterDraw(){
     if(!assetsReady||!world.operator)return;const o=world.operator,t=world.time;
     controlSignals();
@@ -162,8 +168,9 @@
     else{
       ctx.save();ctx.globalAlpha=1;
       const frame=operatorAnimation.update(o,t);
-      if(o.phase==='scared')atlasSprite(art.wheel,3,2,5,448,694,98,90);
-      else{emptyConsole();operatorSprite(frame);}
+      emptyConsole();
+      if(o.phase==='scared')operatorSprite(13,ctx,448,738-Math.max(0,Math.sin(o.age*12))*3);
+      else operatorSprite(frame);
       ctx.restore();
     }
     ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillStyle='#765333';ctx.fillText(o.phase==='gone'||o.phase==='flee'?'无人控制 · 车队停机':o.phase==='scared'?'受惊刹车':o.signalColor?colors[o.signalColor].label+' · '+(o.speed<-.5?'向左':o.speed>.5?'向右':'接管中'):'车队停机',445,750);
@@ -245,6 +252,6 @@
   document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.close).close()));
   $('#sound').addEventListener('click',async()=>{const button=$('#sound');button.disabled=true;try{const on=await sound.toggle();button.setAttribute('aria-label',on?'关闭音效':'开启音效');button.setAttribute('aria-pressed',String(on));button.title=on?'关闭音效':'开启音效';$('#sound-label').textContent=on?'音效 开':'音效 关';$('#sound-waves').setAttribute('d',on?'M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14':'m16 9 5 6m0-6-5 6');}catch(e){status(e.message);}finally{button.disabled=false;}});
   document.addEventListener('visibilitychange',()=>{lastTime=performance.now();accumulator=0;releasePointer();});
-  window.sandGame=Object.freeze({snapshot:()=>({level:current+1,...world.snapshot(),assetsReady,paused:isPaused(),seen:[...sessionSeen],pendingIntro:[...pendingIntro],visual:{operatorFrame:operatorAnimation.frame,operatorAtlasFrames:24,speech:{text:speech,x:284,y:664,tail:!!(world.operator&&!['flee','gone'].includes(world.operator.phase))},grains:particles.length,dust:dust.length,workerHeight:90,operatorFacing:'mine',controlPosition:{x:448,y:694},signalColor:world.operator?.signalColor||null,pointing:!!(world.operator?.phase==='control'&&world.operator?.pointTime>0),operatorCount:world.operator&&world.operator.phase!=='gone'?1:0,blastFrames:bursts.filter(b=>b.type==='blast').map(b=>({x:b.x,y:b.y,progress:1-b.life})),rivalHeight:68,railY:646},brush,soundEnabled:sound.enabled,audioPlayed:sound.played,best:[...best],bestSand:[...bestSand],bestScores:[...bestScores]}),levels:()=>levels.map(l=>({id:l.id,title:l.title,features:[...l.features]}))});
+  window.sandGame=Object.freeze({snapshot:()=>({level:current+1,...world.snapshot(),assetsReady,paused:isPaused(),seen:[...sessionSeen],pendingIntro:[...pendingIntro],visual:{operatorFrame:operatorAnimation.frame,operatorAtlasFrames:24,wheelAngle:operatorAnimation.wheelAngle,consolePosition:{x:450,y:673},speech:{text:speech,x:284,y:664,tail:!!(world.operator&&!['flee','gone'].includes(world.operator.phase))},grains:particles.length,dust:dust.length,workerHeight:90,operatorFacing:'mine',controlPosition:{x:448,y:694},signalColor:world.operator?.signalColor||null,pointing:!!(world.operator?.phase==='control'&&world.operator?.pointTime>0),operatorCount:world.operator&&world.operator.phase!=='gone'?1:0,blastFrames:bursts.filter(b=>b.type==='blast').map(b=>({x:b.x,y:b.y,progress:1-b.life})),rivalHeight:68,railY:646},brush,soundEnabled:sound.enabled,audioPlayed:sound.played,best:[...best],bestSand:[...bestSand],bestScores:[...bestScores]}),levels:()=>levels.map(l=>({id:l.id,title:l.title,features:[...l.features]}))});
   load(entry.index);requestAnimationFrame(frame);assetLoad.then(()=>{assetsReady=true;drawCodexArt();$('#loading').hidden=true;lastTime=performance.now();}).catch(e=>{$('#loading-text').textContent=e.message;$('#reload-assets').hidden=false;});$('#reload-assets').addEventListener('click',()=>location.reload());
 })();

@@ -14,7 +14,7 @@
     }
     untilBoundary(){const e=this.active||this.queue[0];if(!e)return Infinity;return Math.max(1e-9,((e.kind==='bomb'?[.9,1.4]:[.35,1.55,1.8]).find(t=>t>e.age+1e-9)??(e.kind==='bomb'?1.4:1.8))-e.age);}
     step(dt,{physical=false}={}){const fullDt=dt;while(dt>1e-10&&(this.active||this.queue.length)){if(!this.active){this.active=this.queue.shift();this.active.phase='warning';this.w.events.push({type:'magic-warning',kind:this.active.kind,x:this.active.x,y:this.active.y});}const e=this.active,duration=e.kind==='bomb'?1.4:1.8,consume=Math.min(dt,duration-e.age);e.age+=consume;dt-=consume;
-        if(e.kind==='bomb'){if(e.age>=.9-1e-9&&!e.applied){e.applied=true;if(physical){this.scheduled++;this.w.queueInteraction({u:Math.max(0,Math.min(1,(.9-(e.age-consume))/fullDt)),kind:'damage',apply:()=>{this.scheduled--;this.blast(e);}});}else this.blast(e);}e.phase=e.age<.9?'warning':'resolving';}
+        if(e.kind==='bomb'){if(e.age>=.9-1e-9&&!e.applied){e.applied=true;if(physical){this.scheduled++;this.w.queueInteraction({u:Math.max(0,Math.min(1,(.9-(e.age-consume))/fullDt)),kind:'damage',apply:()=>{this.scheduled--;this.blast(e);}});}else this.blast(e);}e.phase=e.applied?'resolving':'warning';}
         else{e.phase=e.age<.35?'warning':'resolving';if(e.age>=.35){if(!e.target)this.prepareRefill(e);this.fillRows(e,Math.min(1,(e.age-.35)/1.2));if(e.age>=1.55-1e-9&&!e.applied){e.applied=true;this.fillRows(e,1);const r=this.w.rival;if(r){r.path=[];r.repath=0;r.noProgress=0;r.refreshObstacles();}this.w.events.push({type:'magic-refilled',x:e.x,y:e.y});}}}
         if(e.age>=duration-1e-9){e.phase='done';this.completed.push({id:e.id,kind:e.kind});this.active=null;}else break;
       }}

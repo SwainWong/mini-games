@@ -25,3 +25,13 @@ test('pause holds the exact pose; restart and scare discard unfinished gestures'
  o.phase='scared';a.equal(anim.update(o,.2),5);a.equal(anim.gesture,null);
  o.phase='control';anim.update(o,0);a.equal(anim.gesture.age,0);a.equal(anim.frame,12);
 });
+test('wheel rotation eases with steering, pauses and holds its angle when control is scared',()=>{
+ const anim=new Animation(),o=op();let t=0;
+ for(let n=0;n<130;n++){anim.update(o,t);t+=1/120;}
+ o.steering=1;let last=0;
+ for(let n=0;n<80;n++){anim.update(o,t);t+=1/120;a.ok(Math.abs(anim.wheelAngle-last)<=2.2/120+1e-9);last=anim.wheelAngle;}
+ a.ok(anim.wheelAngle<-.65);const angle=anim.wheelAngle;
+ anim.update(o,t-1/120);a.equal(anim.wheelAngle,angle);
+ o.phase='scared';anim.update(o,t);a.equal(anim.wheelAngle,angle);
+ anim.reset();a.equal(anim.wheelAngle,0);
+});

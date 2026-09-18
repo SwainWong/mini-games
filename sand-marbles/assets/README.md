@@ -141,3 +141,8 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 - `operator-actor-v17.png`：image_gen 从母版移除控制台和方向盘得到的 RGBA 人物层；游戏使用这一图集。对应两个 `*-prompt.md` 保留完整提示词。
 - 固定控制台继续使用 `control-props-v14.png`，独立绘制。人物按脚底锚点对齐，每次只画一帧；转向经过中间帧，指车包含抬手、伸手、停留、收手、重新握持。
 - 第 11 帧是备用中立帧；运行序列使用其余 23 帧。没有半透明动作混合。
+
+## v16 开发版分离轮盘
+
+- `console-layers-v16.png`：image_gen 生成的1536×1024透明RGBA素材，左列为无轮盘的木铜底座，右列为独立六辐方向盘。提示词见 [console-layers-v16-prompt.md](console-layers-v16-prompt.md)。
+- 底座固定绘制，轮盘单独绕轴转动；使用v17人物层和实测手套握点对齐。受惊时也只切换人物，底座不随人物动作。此分层补充属于完整开发版，和已经发布的v17残影修复区分。
