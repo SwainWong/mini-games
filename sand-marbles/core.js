@@ -32,7 +32,7 @@
   const CART_MOUTH=Object.freeze({y:590,halfWidth:46,halfHeight:7,rimWidth:3});
   const jarMouth=j=>({...CART_MOUTH,x:j.x,y:CART_MOUTH.y-j.lift});
   class World{
-    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.rocks=level.rocks.map((r,id)=>({...r,id,vy:0,warning:0,phase:'stable',broken:false}));this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=true;this.state='playing';this.reason='';this.collected=0;this.score=0;this.losses={'wrong-color':0,missed:0,stolen:0};this.interactions=[];this.frameFailure=null;this.treasures=(level.treasures||[]).map((t,i)=>({...t,id:i,r:t.r||16,opened:false}));this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,intact:true,balls:[],flash:0}));this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,alive:true,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
+    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.rocks=level.rocks.map((r,id)=>({...r,id,vy:0,warning:0,phase:'stable',broken:false}));this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.timeLimit=level.timeLimit??60;this.endCause=null;this.started=true;this.state='playing';this.reason='';this.collected=0;this.score=0;this.losses={'wrong-color':0,missed:0,stolen:0};this.interactions=[];this.frameFailure=null;this.treasures=(level.treasures||[]).map((t,i)=>({...t,id:i,r:t.r||16,opened:false}));this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,intact:true,balls:[],flash:0}));this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,alive:true,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
       this.crew=new Crew(this);
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
       this.total=this.balls.length;this.targetScore=level.targetScore??this.total*10;this.rival=level.mechanics.rival?new Rival({...level,rocks:this.rocks},this.balls):null;this.hazards=new Hazards(this);
@@ -69,18 +69,22 @@
         while(this.interactions.some(e=>Math.abs(e.u-u)<1e-7)&&this.state==='playing'){
           this.interactions.sort((a,b)=>a.u-b.u||(priority[a.kind]??4)-(priority[b.kind]??4));this.interactions.shift().apply();
         }
-        this.checkOutcome();
+        this.checkOutcome(false);
       }
       this.interactions.length=0;this.checkOutcome();
     }
-    checkOutcome(){
+    get timeRemaining(){return Math.max(0,this.timeLimit-this.time);}
+    checkOutcome(settleDeadline=true){
       if(this.state!=='playing')return;
-      if(this.score>=this.targetScore){this.end(true);return;}
-      const remaining=this.remainingPotential();if(this.score+remaining>=this.targetScore)return;
+      const qualified=this.score>=this.targetScore,remaining=this.remainingPotential();
+      // Passing the gate never stops the round; keep every remaining scoring opportunity.
+      if(qualified&&!this.balls.some(b=>b.active)){this.end(true,`珠子已全部结算。最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,null,'exhausted');return;}
+      if(settleDeadline&&this.time>=this.timeLimit){this.end(qualified,`时间到！最终 ${this.score} 分，过关门槛 ${this.targetScore} 分。`,qualified?null:{kind:'timeout'},'timeout');return;}
+      if(this.score+remaining>=this.targetScore)return;
       const f=this.frameFailure;if(f?.ball&&f.u!==undefined&&this.stepMouths)this.freezeCrossing(f.ball,f,this.stepMouths);
       const failure=f?Object.fromEntries(Object.entries(f).filter(([k])=>k!=='ball')):{kind:'unreachable'};
       if(failure.mouthX!==undefined)failure.targetX=failure.mouthX;
-      this.end(false,`当前 ${this.score} + 剩余最高 ${remaining} < 目标 ${this.targetScore}。积分已不足，重来试试另一条路线。`,failure);
+      this.end(false,`当前 ${this.score} + 剩余最高 ${remaining} < 目标 ${this.targetScore}。积分已不足，重来试试另一条路线。`,failure,'unreachable');
     }
     freezeCrossing(b,contact,mouths){
       // Render loss at the same instant used by the swept catch test, including moving carts.
@@ -92,7 +96,7 @@
       for(const rock of this.rocks.filter(r=>!r.broken)){const dx=b.x-rock.x,dy=b.y-rock.y,rx=rock.rx+b.r,ry=rock.ry+b.r,d=Math.sqrt(dx*dx/(rx*rx)+dy*dy/(ry*ry));if(d<1){const angle=Math.atan2(dy/ry,dx/rx);b.x=rock.x+Math.cos(angle)*rx;b.y=rock.y+Math.sin(angle)*ry;let nx=Math.cos(angle)/rx,ny=Math.sin(angle)/ry;const n=Math.hypot(nx,ny);nx/=n;ny/=n;const vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}}}
     }
     step(dt=STEP){
-      if(this.state!=='playing')return;this.interactions=[];this.frameFailure=null;const mouths=this.jars.map(jarMouth);this.stepMouths=mouths;for(const b of this.balls){b.previousX=b.x;b.previousY=b.y;}if(this.started){this.time+=dt;this.mechanisms(dt);this.hazards.step(dt);}
+      if(this.state!=='playing')return;if(this.started){dt=Math.min(dt,this.timeRemaining);if(dt<=1e-9){this.time=this.timeLimit;this.checkOutcome();return;}}this.interactions=[];this.frameFailure=null;const mouths=this.jars.map(jarMouth);this.stepMouths=mouths;for(const b of this.balls){b.previousX=b.x;b.previousY=b.y;}if(this.started){this.time=Math.min(this.timeLimit,this.time+dt);if(this.timeLimit-this.time<1e-9)this.time=this.timeLimit;this.mechanisms(dt);this.hazards.step(dt);}
       for(const b of this.balls){if(!b.active)continue;const gravity=b.gravity;
         b.vy=clamp(b.vy+gravity*dt,-220,390);b.vx=clamp(b.vx*.999,-180,180);b.x+=b.vx*dt;b.y+=b.vy*dt;this.collide(b);
       }
@@ -118,9 +122,9 @@
       this.resolveInteractions();
       for(const j of this.jars)j.flash=Math.max(0,j.flash-dt*2);
     }
-    end(won,reason='',failure=null){this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
+    end(won,reason='',failure=null,cause=null){this.endCause=cause;this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{...this.hazards.snapshot(),state:this.state,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{...this.hazards.snapshot(),state:this.state,endCause:this.endCause,timeLimit:this.timeLimit,timeRemaining:Number(this.timeRemaining.toFixed(3)),qualified:this.score>=this.targetScore,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,CART_MOUTH,rating,budgets};
 });

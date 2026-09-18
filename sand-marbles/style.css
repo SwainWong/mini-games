@@ -11,3 +11,7 @@ body{background:radial-gradient(ellipse at top,#e6c591,#8d6243 120%)}.masthead{h
 
 @media(max-width:799px){.game-toolbar{padding-top:3px;padding-bottom:3px}.dig-panel{padding-bottom:3px}}
 .codex-content article{display:flow-root}.codex-art{float:right;width:88px;height:70px;margin:0 0 6px 10px;cursor:default;touch-action:auto}.codex-content article p{clear:none}
+/* Timed rounds: the target is a gate, not a score cap. */
+.score-panel .round-status{display:flex;justify-content:space-between;align-items:center;gap:8px}.clock-label{color:#fff1c3;white-space:nowrap}#round-clock{font-variant-numeric:tabular-nums;font-size:15px;color:#fff1c3}.score-panel[data-qualified=true]{border-color:#84ba73}.score-panel[data-urgent=true] #round-clock{color:#ffa58d}
+@media(max-width:799px){.score-panel .round-status{display:flex;flex-direction:column;align-items:flex-end;gap:1px;margin:0;min-width:76px}.score-panel .round-status b{display:inline;font-size:10px}.score-panel .round-status #round-clock{font-size:13px}.score-panel .round-status span{white-space:nowrap;font-size:9px}}
+@media(max-width:799px){.score-panel .round-status{gap:0}.score-panel .round-status span{line-height:12px}.score-panel .round-status .clock-label{line-height:14px}}
