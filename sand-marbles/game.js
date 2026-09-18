@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const {W,H,BOTTOM:SOIL_BOTTOM,GW,CELL,STEP,World,jarMouth}=SandCore,levels=SandLevels;
+  const {W,H,BOTTOM:SOIL_BOTTOM,GW,CELL,STEP,World,jarMouth,CART_MOUTH}=SandCore,levels=SandLevels;
   const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),$=s=>document.querySelector(s);
   const colors={amber:{light:'#fff9c8',mid:'#ffd35a',base:'#f28a15',dark:'#975012',label:'琥珀'},blue:{light:'#e8fcff',mid:'#75dcff',base:'#2494dd',dark:'#24549a',label:'冰蓝'},jade:{light:'#eaffc9',mid:'#9cee9c',base:'#37ad7e',dark:'#26734e',label:'青玉'},rose:{light:'#fff0fb',mid:'#ffaad6',base:'#df5ba6',dark:'#972d7a',label:'玫瑰'}};
   const features={worm:['〰','蚯蚓'],porter:['♟','推车队友'],rival:['⚑','盗宝人']};
@@ -86,14 +86,14 @@
     ctx.restore();
   }
   function jarLabel(jar){
-    const x=jar.x,y=jarMouth(jar).y,p=colors[jar.color];ctx.save();
-    ctx.strokeStyle=p.base;ctx.lineWidth=3;roundRect(ctx,x-47,y-8,94,16,5);ctx.stroke();ctx.strokeStyle=p.light;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-42,y-8);ctx.lineTo(x+42,y-8);ctx.stroke();
+    const mouth=jarMouth(jar),{x,y,halfWidth,halfHeight,rimWidth}=mouth,p=colors[jar.color];ctx.save();
+    ctx.strokeStyle=p.base;ctx.lineWidth=rimWidth;roundRect(ctx,x-halfWidth-rimWidth/2,y-halfHeight-rimWidth/2,halfWidth*2+rimWidth,halfHeight*2+rimWidth,5);ctx.stroke();ctx.strokeStyle=p.light;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-halfWidth+5,y-halfHeight-rimWidth/2);ctx.lineTo(x+halfWidth-5,y-halfHeight-rimWidth/2);ctx.stroke();
     const badge=ctx.createLinearGradient(x,y+22,x,y+42);badge.addColorStop(0,p.base);badge.addColorStop(1,p.dark);ctx.fillStyle=badge;roundRect(ctx,x-22,y+21,44,19,5);ctx.fill();ctx.strokeStyle=p.light;ctx.lineWidth=.8;ctx.stroke();
     ctx.fillStyle='#fffaf0';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(p.label+(jar.balls.length?' '+jar.balls.length:''),x,y+34);
     if(jar.flash>0){ctx.globalAlpha=jar.flash;ctx.strokeStyle='#fff6ac';ctx.lineWidth=4;roundRect(ctx,x-49,y-9,98,18,5);ctx.stroke();}ctx.restore();
   }
   function jarDraw(jar){
-    if(!assetsReady)return;const x=jar.x,y=jarMouth(jar).y,scale=.0885;
+    if(!assetsReady)return;const {x,y,halfWidth}=jarMouth(jar),scale=halfWidth/520;
     ctx.save();ctx.fillStyle='#43281733';ctx.beginPath();ctx.ellipse(x,648,54,5,0,0,Math.PI*2);ctx.fill();
     ctx.drawImage(art.cart,x-782*scale,y-250*scale,1572*scale,1001*scale);
     // Spokes rotate with actual horizontal displacement, wheels stay on the rails.
@@ -137,7 +137,7 @@
     ctx.translate(blade.x,blade.y);ctx.rotate(Math.atan2(blade.y-hand.y,blade.x-hand.x)-Math.PI/2);const g=ctx.createLinearGradient(-5,0,5,0);g.addColorStop(0,'#5b676e');g.addColorStop(.45,'#dde1dc');g.addColorStop(1,'#657078');ctx.fillStyle=g;ctx.strokeStyle='#4d5659';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(-5,-4);ctx.lineTo(5,-4);ctx.lineTo(5,2);ctx.quadraticCurveTo(0,8,-5,2);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
   }
   function failureDraw(){
-    const f=world.failure;if(!f)return;ctx.save();ctx.strokeStyle='#b73a32';ctx.fillStyle='#fff1da';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,18,0,Math.PI*2);ctx.fill();ctx.stroke();marble(ctx,f.x,f.y,9,f.color);if(f.targetX!==undefined){roundRect(ctx,f.targetX-43,f.targetY-6,86,22,5);ctx.stroke();}const x=Math.max(76,Math.min(W-76,f.x));ctx.fillStyle='#9e342e';roundRect(ctx,x-72,518,144,34,7);ctx.fill();ctx.fillStyle='#fff9ee';ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(f.kind==='stolen'?'被盗宝人抢走了！':f.target?`${colors[f.color].label} → ${colors[f.target].label} ×`:'珠子错过车斗开口',x,541);ctx.restore();
+    const f=world.failure;if(!f)return;ctx.save();ctx.strokeStyle='#b73a32';ctx.fillStyle='#fff1da';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,(f.r||9)+5,0,Math.PI*2);ctx.stroke();marble(ctx,f.x,f.y,f.r||9,f.color);drawMaterial({x:f.x,y:f.y,r:f.r||9,type:f.material||'glass'});if(f.targetX!==undefined){roundRect(ctx,f.targetX-CART_MOUTH.halfWidth,f.targetY-CART_MOUTH.halfHeight,CART_MOUTH.halfWidth*2,CART_MOUTH.halfHeight*2,5);ctx.stroke();}const x=Math.max(76,Math.min(W-76,f.x));ctx.fillStyle='#9e342e';roundRect(ctx,x-72,518,144,34,7);ctx.fill();ctx.fillStyle='#fff9ee';ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(f.kind==='stolen'?'被盗宝人抢走了！':f.target?`${colors[f.color].label} → ${colors[f.target].label} ×`:'珠子错过车斗开口',x,541);ctx.restore();
   }
   function render(){
     syncTerrain();ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.drawImage(wall,0,0);ctx.save();ctx.shadowColor='#41261a88';ctx.shadowBlur=3;ctx.shadowOffsetY=2;ctx.drawImage(soil,0,0);ctx.restore();levels[current].rocks.forEach(rockDraw);mechanismDraw();

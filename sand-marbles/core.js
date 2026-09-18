@@ -24,9 +24,11 @@
   }
   function setupTerrain(level){const t=new Terrain(level.rocks);for(const p of level.tunnels)t.path(p,30,'initial');for(const g of level.groups)t.dig(g.x,g.y,40,'initial');return t;}
   function budgets(level){return {...level.budget};}
-  const jarMouth=j=>({x:j.x,y:590-j.lift,halfWidth:46});
+  // The visible inner aperture is the center-crossing boundary, shared with the renderer.
+  const CART_MOUTH=Object.freeze({y:590,halfWidth:46,halfHeight:7,rimWidth:3});
+  const jarMouth=j=>({...CART_MOUTH,x:j.x,y:CART_MOUTH.y-j.lift});
   class World{
-    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=true;this.state='playing';this.reason='';this.collected=0;this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
+    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=true;this.state='playing';this.reason='';this.collected=0;this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
       if(level.mechanics.porter)this.choosePorter();
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
       this.total=this.balls.length;this.rival=level.mechanics.rival?new Rival(level,this.balls):null;
@@ -62,7 +64,12 @@
         p.phase=phase[0];p.moving=p.phase==='walk'||p.phase==='return';const u=clamp(p.elapsed/phase[1],0,1),ease=u*u*(3-2*u),from=phases[Math.max(0,p.phaseIndex-1)][2];p.progress=from+(phase[2]-from)*ease;j.x=j.homeX+p.offset*p.progress;j.lift=0;
       }
     }
-    receive(j,b){b.active=false;j.balls.push(b.color);j.flash=1;this.collected++;this.events.push({type:'collect',x:j.x,y:jarMouth(j).y,color:b.color,count:this.collected});}
+    receive(j,b,contact={x:b.x,y:jarMouth(j).y,mouthX:j.x}){b.active=false;j.balls.push(b.color);j.flash=1;this.collected++;this.catches.push({...contact,offset:contact.x-contact.mouthX,color:b.color,material:b.type,r:b.r});this.events.push({type:'collect',x:contact.x,y:contact.y,color:b.color,count:this.collected});}
+    freezeCrossing(b,contact,mouths){
+      // Render loss at the same instant used by the swept catch test, including moving carts.
+      for(let i=0;i<this.jars.length;i++){const j=this.jars[i];j.x=mouths[i].x+(j.x-mouths[i].x)*contact.u;}
+      b.x=contact.x;b.y=contact.y;
+    }
     collide(b){
       for(let iteration=0;iteration<9;iteration++){let nx=0,ny=0,hits=0;for(const[dx,dy]of samples)if(this.terrain.solid(b.x+dx*b.r,b.y+dy*b.r)){nx-=dx;ny-=dy;hits++;}if(!hits)break;const n=Math.hypot(nx,ny);if(n<.01){b.y-=1;continue;}nx/=n;ny/=n;b.x+=nx*.8;b.y+=ny*.8;const vn=b.vx*nx+b.vy*ny;if(vn<0){if(vn<-90&&this.time-b.hitAt>.16){this.events.push({type:'hit',speed:-vn});b.hitAt=this.time;}b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}b.vx*=.985;}
       for(const rock of this.level.rocks){const dx=b.x-rock.x,dy=b.y-rock.y,rx=rock.rx+b.r,ry=rock.ry+b.r,d=Math.sqrt(dx*dx/(rx*rx)+dy*dy/(ry*ry));if(d<1){const angle=Math.atan2(dy/ry,dx/rx);b.x=rock.x+Math.cos(angle)*rx;b.y=rock.y+Math.sin(angle)*ry;let nx=Math.cos(angle)/rx,ny=Math.sin(angle)/ry;const n=Math.hypot(nx,ny);nx/=n;ny/=n;const vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}}}
@@ -74,17 +81,24 @@
       }
       for(let repeat=0;repeat<3;repeat++)for(let i=0;i<this.balls.length;i++){const a=this.balls[i];if(!a.active)continue;for(let j=i+1;j<this.balls.length;j++){const b=this.balls[j];if(!b.active)continue;let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=a.r+b.r)continue;if(d<.001){dx=.01;dy=.01;d=Math.hypot(dx,dy);}const nx=dx/d,ny=dy/d,overlap=a.r+b.r-d,ia=1/a.mass,ib=1/b.mass,inv=ia+ib;a.x-=nx*overlap*ia/inv;a.y-=ny*overlap*ia/inv;b.x+=nx*overlap*ib/inv;b.y+=ny*overlap*ib/inv;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-(1+Math.min(a.bounce,b.bounce))*relative/inv;a.vx-=impulse*nx*ia;a.vy-=impulse*ny*ia;b.vx+=impulse*nx*ib;b.vy+=impulse*ny*ib;}}this.collide(a);}
       for(const b of this.balls){
-        if(!b.active)continue;
+        if(!b.active)continue;let missed=null;
         for(let i=0;i<this.jars.length;i++){
           const j=this.jars[i],before=mouths[i],now=jarMouth(j),above=b.previousY-before.y,below=b.y-now.y;
           // Swept crossing in the moving mouth's frame, never the jar's home position.
           if(above>0||below<0||below<=above)continue;
           const u=-above/(below-above),x=b.previousX+(b.x-b.previousX)*u,mouthX=before.x+(now.x-before.x)*u;
-          if(Math.abs(x-mouthX)>now.halfWidth-b.r)continue;
-          if(j.color!==b.color){this.end(false,'珠子落入了不同颜色的矿车。失误位置已圈出，可以查看本次路径。',{kind:'wrong-color',x:b.x,y:b.y,color:b.color,target:j.color,targetX:j.x,targetY:now.y});return;}
-          this.receive(j,b);break;
+          const contact={x,y:now.y,mouthX,u},offset=x-mouthX;
+          // A center inside the painted opening rolls over the lip into the cart.
+          // Do not silently inset the aperture by the radius of each bead material.
+          if(Math.abs(offset)>now.halfWidth+1e-7){if(!missed||Math.abs(offset)<Math.abs(missed.offset))missed={...contact,offset,j};continue;}
+          if(j.color!==b.color){this.freezeCrossing(b,contact,mouths);this.end(false,'珠子落入了不同颜色的矿车。失误位置已圈出，可以查看本次路径。',{kind:'wrong-color',...contact,r:b.r,material:b.type,color:b.color,target:j.color,targetX:j.x,targetY:now.y});return;}
+          this.receive(j,b,contact);break;
         }
-        if(b.active&&b.y>620){this.end(false,'珠子错过了车斗开口。矿车会移动，留意它停下的位置和时机。',{kind:'missed',x:b.x,y:b.y,color:b.color});return;}
+        if(b.active&&missed){
+          // Resolve at the rim crossing, before the bead/cart drift to misleading later positions.
+          this.freezeCrossing(b,missed,mouths);this.end(false,'珠子从车斗开口外侧落下。画面已停在错过车沿的瞬间，可查看后重来。',{kind:'missed',x:missed.x,y:missed.y,mouthX:missed.mouthX,offset:missed.offset,r:b.r,material:b.type,color:b.color,targetX:missed.j.x,targetY:missed.y});return;
+        }
+        if(b.active&&b.y>620){this.end(false,'珠子错过了车斗开口。矿车会移动，留意它停下的位置和时机。',{kind:'missed',x:b.x,y:b.y,r:b.r,material:b.type,color:b.color});return;}
       }
       if(this.collected===this.total)this.end(true);
       else if(this.started&&this.rival){this.rival.step(this,dt);if(this.state!=='playing')return;}
@@ -92,7 +106,7 @@
     }
     end(won,reason='',failure=null){this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{state:this.state,collected:this.collected,total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{state:this.state,collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
   }
-  return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,rating,budgets};
+  return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,CART_MOUTH,rating,budgets};
 });
