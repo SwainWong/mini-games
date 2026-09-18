@@ -24,7 +24,7 @@
         </div>
         <div class="score-panel"><div><small>TARGET · 门槛</small><b id="target-score">40</b></div><div><small>SCORE · 当前</small><b id="current-score">0</b></div><p class="round-status"><span class="clock-label">剩余 <b id="round-clock" role="timer" aria-label="剩余时间">00:45</b></span><span>最高可得 <b id="remaining-score">60</b></span></p><progress id="score-meter" max="40" value="0"></progress></div>
         <div class="level-features" id="features" aria-label="本关机制"></div>
-        <div class="dig-panel"><div><span>已挖沙 <b id="dug-count">0</b></span><span id="star-budget">三星目标 ≤ 0</span></div><meter id="sand-meter" min="0" max="100" value="0" aria-label="本关挖沙用量"></meter><div class="brush-options" role="group" aria-label="铲子大小"><span>铲子</span><button data-brush="14">精细</button><button data-brush="24" class="selected" aria-pressed="true">常规</button><button data-brush="34">宽铲</button><button id="rules" aria-haspopup="dialog">矿场图鉴</button></div></div>
+        <div class="dig-panel"><div><span>已挖沙 <b id="dug-count">0</b></span><span id="star-budget">三星目标 ≤ 0</span></div><meter id="sand-meter" min="0" max="100" value="0" aria-label="本关挖沙用量"></meter><div class="brush-options"><button id="rules" aria-haspopup="dialog">矿场图鉴</button></div></div>
         <div class="board-wrap" id="board-wrap">
           <div id="loading" class="loading"><span class="loading-gem">◆</span><b id="loading-text">正在整理探险装备…</b><button id="reload-assets" hidden>重新加载</button></div><canvas id="game" width="560" height="760" aria-label="按住鼠标或手指划开沙土，让珠子落入同色矿车。">你的浏览器需要支持 Canvas 才能玩这个游戏。</canvas>
           <div class="board-caption"><span><i></i> <span id="board-instruction">按住并划动，挖出一条路</span></span><span id="collected">0 / 22</span></div>
@@ -46,6 +46,7 @@
   <script src="cart-crew.js?v=15"></script>
   <script src="codex.js?v=15"></script>
   <script src="rival.js?v=15"></script>
+  <script src="magic.js?v=16"></script>
   <script src="core.js?v=15"></script>
   <script src="levels.js?v=15"></script>
   <script src="audio.js?v=15"></script>

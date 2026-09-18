@@ -27,9 +27,10 @@
       }if(moved)w.terrain.rebuildRockMask(w.rocks);
       for(const b of w.bombs){const r=w.rocks[b.rock];if(b.state==='idle'&&r?.broken)b.state='disabled';if(b.state!=='burning')continue;const before=b.age;b.age+=dt;if(b.age>=b.fuseSeconds)w.queueInteraction({u:Math.max(0,(b.fuseSeconds-before)/dt),kind:'damage',apply:()=>this.explode(b)});}
     }
-    touchBead(ball){const w=this.w;for(const t of w.treasures){if(t.opened)continue;const u=contact(ball,t,t.r+ball.r);if(u!==null)w.queueInteraction({u,kind:'treasure',apply:()=>{if(t.opened||!ball.active)return;t.opened=true;w.score+=t.points;w.events.push({type:'treasure',x:t.x,y:t.y,points:t.points});}});}
+    touchBead(ball){const w=this.w;for(const t of w.treasures){if(t.opened)continue;const u=contact(ball,t,t.r+ball.r);if(u!==null)w.queueInteraction({u,kind:'treasure',apply:()=>{if(t.opened||!ball.active)return;w.magic.open(t,ball);}});}
       for(const b of w.bombs){if(b.state!=='idle')continue;const u=contact(ball,b.pad,12+ball.r);if(u!==null)w.queueInteraction({u,kind:'trigger',apply:()=>{if(b.state==='idle'&&ball.active){b.state='burning';b.age=0;w.events.push({type:'ignite',...b.pad});}}});}
     }
+    fragmentRocks(p,radius){const w=this.w;for(const r of w.rocks)if(!r.broken&&ellipseDistance(p,r)<=radius){r.broken=true;r.phase='broken';}w.terrain.rebuildRockMask(w.rocks);}
     explode(b){if(b.state!=='burning')return;const w=this.w,p=this.bombPoint(b);b.state='spent';const near=(q,extra=0)=>Math.hypot(q.x-p.x,q.y-p.y)<=b.radius+extra;
       const chains=w.bombs.filter(o=>o!==b&&o.state==='burning'&&near(this.bombPoint(o)));
       for(const r of w.rocks)if(!r.broken&&ellipseDistance(p,r)<=b.radius){r.broken=true;r.phase='broken';}
@@ -38,6 +39,6 @@
       for(const gem of w.balls)if(gem.active&&near(gem)){const dx=gem.x-p.x,dy=gem.y-p.y,d=Math.max(1,Math.hypot(dx,dy));gem.vx+=dx/d*75;gem.vy-=45;}
       w.events.push({type:'blast',...p,radius:b.radius});for(const other of chains)this.explode(other);
     }
-    snapshot(){return{rocks:this.w.rocks.map(({x,y,rx,ry,angle,omega,phase,warning,broken,carriers,slotLoads})=>({x,y,rx,ry,angle,omega,phase,warning,broken,carriers,slotLoads})),bombs:this.w.bombs.map(b=>({...b,position:this.bombPoint(b)})),treasures:this.w.treasures.map(t=>({...t}))};}
+    snapshot(){return{rocks:this.w.rocks.map(({x,y,rx,ry,angle,omega,phase,warning,broken,carriers,slotLoads})=>({x,y,rx,ry,angle,omega,phase,warning,broken,carriers,slotLoads})),bombs:this.w.bombs.map(b=>({...b,position:this.bombPoint(b)})),treasures:this.w.treasures.map(({outcome,...t})=>({...t,...(t.opened?{outcome}:{}),points:t.kind==='bag'?(t.opened?(outcome==='coins20'?20:outcome==='coins40'?40:0):null):t.points}))};}
   }return Hazards;
 });

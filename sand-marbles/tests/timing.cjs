@@ -1,4 +1,4 @@
-// Verified input timing for v16 pursuit and randomized cart control; goals and routes unchanged.
+// Verified actual player input with magic outcomes and one 20px shovel.
 module.exports={
   "1": {
     "1": {
@@ -131,7 +131,9 @@ module.exports={
     },
     "300": {
       "delay": 0,
-      "ticks": 2
+      "ticks": 1,
+      "score": 73,
+      "stars": 3
     },
     "1000": {
       "delay": 0,
@@ -163,7 +165,9 @@ module.exports={
   "9": {
     "1": {
       "delay": 0,
-      "ticks": 2
+      "ticks": 1,
+      "score": 150,
+      "stars": 3
     },
     "300": {
       "delay": 0,
@@ -222,8 +226,10 @@ module.exports={
   },
   "12": {
     "1": {
-      "delay": 0,
-      "ticks": 2
+      "delay": 0.25,
+      "ticks": 1,
+      "score": 170,
+      "stars": 3
     },
     "300": {
       "delay": 0,
@@ -247,13 +253,13 @@ module.exports={
     },
     "300": {
       "delay": 0,
-      "ticks": 3,
-      "score": 180,
+      "ticks": 1,
+      "score": 169,
       "stars": 3
     },
     "1000": {
-      "delay": 2.75,
-      "ticks": 3,
+      "delay": 0,
+      "ticks": 1,
       "score": 160,
       "stars": 3
     },

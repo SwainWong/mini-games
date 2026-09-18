@@ -128,3 +128,9 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 - `operator-steering-v15.png`：3×3，9帧左转到回正再到右转。完整提示词：[operator-steering-v15-prompt.md](operator-steering-v15-prompt.md)。
 - `operator-gesture-v15.png`：4×2，左右各4帧抬手、伸手、指车、收手。完整提示词：[operator-gesture-v15-prompt.md](operator-gesture-v15-prompt.md)。
 - 按实际角色边界裁片，固定脚底锚点；单帧只绘制一个 alpha=1 的人物，不使用透明交叉淡化。v14 图集仅保留受惊姿势，v13 图集继续用于逃跑。
+
+## v16 魔法袋与沙流
+
+- `magic-kit-v16.png`：内置 image_gen 生成的 1536×1024 RGBA 图集，3×2 六格依次为紫色问号袋、打开的袋子、闪烁小炸弹、沙流漩涡、灰裂废珠、尘云。
+- 完整提示词：`magic-kit-v16-prompt.md`。保留生成图透明度，不改绘为矢量占位。
+- 废珠仍保留原色小标记；小爆炸复用 `blast-v13.png`，警告范围与逻辑72像素半径一致。

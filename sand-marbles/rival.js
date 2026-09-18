@@ -56,7 +56,9 @@
     get loadFactor(){return Math.max(.38,1/(1+this.bag.length*.10));}
     refreshObstacles(){this.blocked=Array.from({length:COLS*ROWS},(_,i)=>!this.clear((i%COLS+.5)*SIZE,(Math.floor(i/COLS)+.5)*SIZE));}
     stun(world,seconds=4){this.releaseHeld(world);this.pickup=null;this.stunTime=Math.max(this.stunTime,seconds);this.phase='stun';this.path=[];this.repath=0;this.listenTime=0;this.sprint=0;this.refreshObstacles();if(!this.clear(this.x,this.y)){let best=null,d=Infinity;for(let y=64;y<549;y+=8)for(let x=44;x<519;x+=8)if(this.clear(x,y)){const n=Math.hypot(x-this.x,y-this.y);if(n<d){d=n;best={x,y};}}if(best)Object.assign(this,best);}world.events.push({type:'stun',x:this.x,y:this.y});}
-    scare(world){if(this.escaped||this.fleeing)return;this.releaseHeld(world);this.pickup=null;this.fleeing=true;this.dropBag=world.random()<.5;this.fearAge=0;this.phase='scared';this.danger='distant';this.target=null;this.path=[];this.repath=0;world.events.push({type:'rival-scared',x:this.x,y:this.y});}
+    magicScare(world){if(this.escaped)return;this.releaseHeld(world);this.pickup=null;this.target=null;this.path=[];this.repath=0;this.listenTime=0;this.sprint=0;this.danger='distant';const roll=world.random('rival');this.fleeing=roll>=.5;this.resting=roll<.5;this.magicSit=this.resting;
+      if(this.resting){this.restAge=0;this.stamina=Math.min(this.stamina,20);this.phase='rest';}else{this.dropBag=roll<.75;this.fearAge=0;this.phase='scared';}world.events.push({type:'rival-scared',x:this.x,y:this.y});}
+    scare(world){if(this.escaped||this.fleeing)return;this.releaseHeld(world);this.pickup=null;this.fleeing=true;this.dropBag=world.random('rival')<.5;this.fearAge=0;this.phase='scared';this.danger='distant';this.target=null;this.path=[];this.repath=0;world.events.push({type:'rival-scared',x:this.x,y:this.y});}
     flee(world,dt){
       this.fearAge+=dt;if(this.fearAge<.55){this.phase='scared';return;}
       if(this.dropBag&&this.bag.length&&this.fearAge<1){this.phase='dropping';return;}
@@ -77,7 +79,7 @@
       if(this.fleeing){this.flee(world,dt);return;}
       if(this.pickup){this.stepPickup(world,dt);return;}
       if(this.stamina<=20&&!this.resting){this.resting=true;this.restAge=0;this.listenTime=0;this.sprint=0;}
-      if(this.resting){this.restAge+=dt;this.stamina=Math.min(100,this.stamina+26*dt);this.phase=this.restAge<.7?'wipe':this.restAge<1.5?'drink':'rest';if(this.restAge>=2&&this.stamina>=85){this.resting=false;this.repath=0;}return;}
+      if(this.resting){this.restAge+=dt;this.stamina=Math.min(100,this.stamina+26*dt);this.phase=this.magicSit?'rest':this.restAge<.7?'wipe':this.restAge<1.5?'drink':'rest';if(this.restAge>=2&&this.stamina>=85){this.resting=false;this.magicSit=false;this.repath=0;}return;}
       if(this.listenTime>0){this.listenTime=Math.max(0,this.listenTime-dt);this.phase='listen';if(!this.listenTime&&this.stamina>25)this.sprint=1.3;return;}
       if(this.hearingCooldown===0&&this.stamina>25&&world.balls.some(b=>b.active&&Math.hypot(b.vx,b.vy)>=65&&distance(this,b)<=120)){this.listenTime=.35;this.hearingCooldown=6;this.phase='listen';world.events.push({type:'listen',x:this.x,y:this.y});return;}
       const candidates=world.balls.filter(b=>b.active&&!b.held&&b.y<560&&(b.theftImmuneUntil??0)<=(world.time??this.age));
@@ -115,7 +117,7 @@
       if(p.age>=1)world.queueInteraction({u:1,kind:'theft',apply:()=>{if(this.pickup!==p||this.stunTime>0||!b.active)return;b.held=false;this.bag.push(b);this.pickup=null;this.repath=0;world.resolveBead(b,'stolen');world.events.push({type:'stow',...this.bagPoint()});}});
     }
     moveBag(world,dt,travel){if(travel<=.001)return;
-      if(!this.torn&&this.bag.length>6){this.movingSeconds+=dt;while(this.movingSeconds>=1){this.movingSeconds-=1;if(world.random()<.05){this.torn=true;world.events.push({type:'bag-torn',...this.bagPoint()});break;}}}else if(!this.torn)this.movingSeconds=0;
+      if(!this.torn&&this.bag.length>6){this.movingSeconds+=dt;while(this.movingSeconds>=1){this.movingSeconds-=1;if(world.random('rival')<.05){this.torn=true;world.events.push({type:'bag-torn',...this.bagPoint()});break;}}}else if(!this.torn)this.movingSeconds=0;
       if(this.torn&&this.bag.length){this.spillSeconds+=dt;while(this.spillSeconds>=.75&&this.bag.length){this.spillSeconds-=.75;const b=this.bag.pop(),p=this.bagPoint();if(!this.clear(p.x,p.y))Object.assign(p,{x:this.x,y:this.y});world.terrain.dig(p.x,p.y,b.r+6,'rival');Object.assign(b,p,{previousX:p.x,previousY:p.y,active:true,held:false,stolen:false,vx:-(this.fx<0?-1:1)*25,vy:35,theftImmuneUntil:(world.time??this.age)+2});world.losses.stolen=Math.max(0,world.losses.stolen-1);world.events.push({type:'spill',...p,color:b.color});}}
     }
     toolPoint(){const dir=this.fx<0?-1:1,t=this.digCycle;if(this.phase!=='digging'&&!(this.phase==='fleeing'&&this.fleeDigging))return{x:this.x+this.fx*20,y:this.y+this.fy*20};const swing=Math.sin(t*Math.PI*2);return{x:this.x+dir*(24-16*swing),y:this.y+this.fy*12-22*Math.max(0,swing)+7*Math.max(0,-swing)};}

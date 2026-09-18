@@ -31,7 +31,7 @@
       r.phase='cargo';r.vy=r.vx=r.omega=0;r.warning=0;r.pendingCargo=true;const contactU=u0+(u1-u0)*first.t;r.pendingLanding={start:r.frameStartPose||before,stop:p,u:Math.max(1e-9,contactU)};this.w.queueInteraction({u:contactU,kind:'damage',apply:()=>{r.pendingCargo=false;delete r.pendingLanding;if(!r.broken)this.w.events.push({type:'rock-loaded',x:r.x,y:r.y,carriers:[...r.carriers]});}});return true;
     }
     finishAt(u){let changed=false;for(const r of this.w.rocks)if(r.pendingCargo){const pending=r.pendingLanding,t=Math.max(0,Math.min(1,u/pending.u));for(const key of ['x','y','angle'])r[key]=pending.start[key]+(pending.stop[key]-pending.start[key])*t;r.phase=r.broken?'broken':'falling';r.pendingCargo=false;delete r.pendingLanding;delete r.carriers;delete r.slotLoads;delete r.primaryCarrier;delete r.cartOffset;changed=true;}if(changed)this.w.terrain.rebuildRockMask(this.w.rocks);}
-    availablePotential(beads){let sum=0;const canBreak=this.w.bombs.some(b=>b.state==='burning'||b.state==='idle'&&beads.length);
+    availablePotential(beads){let sum=0;const canBreak=this.w.magic?.canScare||this.w.bombs.some(b=>b.state==='burning'||b.state==='idle'&&beads.length);
       for(const color of new Set(beads.map(b=>b.color))){const jars=this.w.jars.filter(j=>j.intact&&j.color===color),slots=jars.reduce((n,j)=>n+(canBreak?Math.max(0,j.capacity-j.balls.length):this.freeSlots(j)),0);sum+=beads.filter(b=>b.color===color).map(b=>b.value??10).sort((a,b)=>b-a).slice(0,slots).reduce((a,b)=>a+b,0);}return sum;
     }
   }return Cargo;
