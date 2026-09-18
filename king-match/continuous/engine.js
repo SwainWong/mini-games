@@ -61,7 +61,7 @@ class Adventure{
  advance(){if(this.phase!=='playing'||this.paused||!this.stages[this.active].latched)return false;this.phase='walking';this.actorY=FLOOR;this.actorX=this.active*SPAN+this.stages[this.active].shield.x+80;this.travelTarget=this.active*SPAN+790;return true;}
  restart(){this.stages[this.active]=new Stage(this.active);this.phase='ready';this.paused=false;this.actorX=this.active*SPAN+460;this.cameraX=this.active*SPAN;this.accumulator=0;this.actorY=FLOOR;this.cameraY=0;this.waypoints=[];this.entryLiftY=this.active===1?320:60;}
  update(delta){if(this.paused||['ready','lost','won'].includes(this.phase))return;this.accumulator+=Math.min(.08,Math.max(0,delta));while(this.accumulator>=DT){this.accumulator-=DT;this.tick();if(['ready','lost','won'].includes(this.phase))break;}}
- tick(){const s=this.stages[this.active];if(this.phase==='playing'){s.step();if(!s.hp){this.phase='lost';this.events.push({type:'lost'});}this.actorX=this.active*SPAN+s.shield.x;return;}
+ tick(){const s=this.stages[this.active];if(this.phase==='playing'){s.step();if(!s.hp){this.phase='lost';this.events.push({type:'lost'});return;}this.actorX=this.active*SPAN+s.shield.x;if(s.latched&&!s.op)this.advance();return;}
   // No new inputs or off-screen hazard simulation during the protected walk.
   if(this.phase==='walking'||this.phase==='transition'){
    const target=this.phase==='transition'?this.waypoints[0]:{x:this.travelTarget,y:FLOOR};
