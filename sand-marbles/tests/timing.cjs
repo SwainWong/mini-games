@@ -1,4 +1,4 @@
-// Verified player input timing; v16 pursuit reopens sand on a different schedule.
+// Verified input timing for v16 pursuit and randomized cart control; goals and routes unchanged.
 module.exports={
   "1": {
     "1": {
@@ -196,7 +196,7 @@ module.exports={
       "ticks": 2
     },
     "100000": {
-      "delay": 0,
+      "delay": 1,
       "ticks": 2,
       "score": 130,
       "stars": 3
@@ -247,15 +247,21 @@ module.exports={
     },
     "300": {
       "delay": 0,
-      "ticks": 2
+      "ticks": 3,
+      "score": 180,
+      "stars": 3
     },
     "1000": {
-      "delay": 1.5,
-      "ticks": 2
+      "delay": 2.75,
+      "ticks": 3,
+      "score": 160,
+      "stars": 3
     },
     "100000": {
-      "delay": 1,
-      "ticks": 4
+      "delay": 0,
+      "ticks": 2,
+      "score": 170,
+      "stars": 3
     }
   },
   "14": {

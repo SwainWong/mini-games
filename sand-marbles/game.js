@@ -113,6 +113,14 @@
     // Spokes rotate with actual horizontal displacement, wheels stay on the rails.
     for(const wx of [x-29.5,x+29.5]){ctx.save();ctx.translate(wx,633.5);ctx.rotate((x-jar.homeX)/11.5);ctx.strokeStyle='#e6c28c88';ctx.lineWidth=1;for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);ctx.beginPath();ctx.moveTo(4,0);ctx.lineTo(9,0);ctx.stroke();}ctx.restore();}ctx.restore();
   }
+  function cargoDraw(jar){
+    if(!jar.intact)return;const mouth=jarMouth(jar);
+    // Every stored bead is drawn once, with the same identity and material as its catch.
+    for(const b of jar.balls){const age=Math.max(0,world.time-b.caughtAt),bounce=age<.35?Math.sin(age/.35*Math.PI)*4:0,x=jar.x+b.cargoX,y=mouth.y+b.cargoY-bounce;
+      marble(ctx,x,y,5.5,b.color);ctx.save();ctx.translate(x,y);ctx.scale(.65,.65);drawMaterial({...b,x:0,y:0});ctx.restore();}
+    // Only the near lip occludes the gems. Keep the upper opening and piled cargo visible.
+    ctx.save();ctx.strokeStyle=colors[jar.color].base;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(jar.x-42,mouth.y+7);ctx.lineTo(jar.x+42,mouth.y+7);ctx.stroke();ctx.restore();
+  }
   function drawMaterial(b){
     if(b.type==='glass')return;ctx.save();ctx.translate(b.x,b.y);ctx.lineCap='round';
     if(b.type==='heavy'){ctx.strokeStyle='#3a3435';ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(0,0,b.r-.7,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#fff4d2';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);ctx.moveTo(0,-5);ctx.lineTo(0,5);ctx.stroke();}
@@ -180,8 +188,8 @@
     const f=world.failure;if(!f||!f.color||!Number.isFinite(f.x))return;ctx.save();ctx.strokeStyle='#b73a32';ctx.fillStyle='#fff1da';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,(f.r||9)+5,0,Math.PI*2);ctx.stroke();marble(ctx,f.x,f.y,f.r||9,f.color);drawMaterial({x:f.x,y:f.y,r:f.r||9,type:f.material||'glass'});if(f.targetX!==undefined){roundRect(ctx,f.targetX-CART_MOUTH.halfWidth,f.targetY-CART_MOUTH.halfHeight,CART_MOUTH.halfWidth*2,CART_MOUTH.halfHeight*2,5);ctx.stroke();}const x=Math.max(76,Math.min(W-76,f.x));ctx.fillStyle='#9e342e';roundRect(ctx,x-72,518,144,34,7);ctx.fill();ctx.fillStyle='#fff9ee';ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(f.kind==='stolen'?'被盗宝人抢走了！':f.target?`${colors[f.color].label} → ${colors[f.target].label} ×`:'珠子错过车斗开口',x,541);ctx.restore();
   }
   function render(){
-    syncTerrain();ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.drawImage(wall,0,0);ctx.save();ctx.shadowColor='#41261a88';ctx.shadowBlur=3;ctx.shadowOffsetY=2;ctx.drawImage(soil,0,0);ctx.restore();world.rocks.filter(r=>!r.broken).forEach(rockDraw);hazardDraw();mechanismDraw();
-    railDraw();world.jars.forEach(jarDraw);porterDraw();world.jars.filter(j=>j.intact).forEach(jarLabel);
+    syncTerrain();ctx.clearRect(0,0,W,H);ctx.drawImage(earth,0,0);ctx.drawImage(wall,0,0);ctx.save();ctx.shadowColor='#41261a88';ctx.shadowBlur=3;ctx.shadowOffsetY=2;ctx.drawImage(soil,0,0);ctx.restore();world.rocks.filter(r=>!r.broken&&!r.carriers?.length).forEach(rockDraw);hazardDraw();mechanismDraw();
+    railDraw();world.jars.forEach(jarDraw);world.jars.forEach(cargoDraw);world.rocks.filter(r=>!r.broken&&r.carriers?.length).forEach(rockDraw);porterDraw();world.jars.filter(j=>j.intact).forEach(jarLabel);
     for(const b of world.balls)if(b.active&&!b.held){marble(ctx,b.x,b.y,b.r,b.color);drawMaterial(b);}rivalDraw();failureDraw();
     for(const p of dust){ctx.globalAlpha=Math.max(0,p.life/p.maxLife)*.18;const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size);g.addColorStop(0,'#f5d399');g.addColorStop(1,'#e9bb7600');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
     for(const p of particles){ctx.save();ctx.globalAlpha=Math.min(1,p.life*3);ctx.translate(p.x,p.y);ctx.rotate(p.angle||0);ctx.fillStyle=p.color;ctx.beginPath();ctx.moveTo(-p.size,-p.size*.5);ctx.lineTo(p.size*.6,-p.size);ctx.lineTo(p.size,p.size*.5);ctx.lineTo(-p.size*.5,p.size);ctx.closePath();ctx.fill();ctx.fillStyle='#ffe7ac99';ctx.fillRect(-p.size*.5,-p.size*.55,p.size*.8,.8);ctx.restore();}

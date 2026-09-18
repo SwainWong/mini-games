@@ -2,6 +2,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.SandCore=api;})(globalThis,()=>{
   const G=typeof module==='object'?require('./rock-geometry.js'):globalThis.SandRock;
   'use strict';
+  const Cargo=typeof module==='object'?require('./cart-cargo.js'):globalThis.SandCargo;
   const Crew=typeof module==='object'?require('./cart-crew.js'):globalThis.SandCrew;
   const Hazards=typeof module==='object'?require('./hazards.js'):globalThis.SandHazards;
   const Rival=typeof module==='object'?require('./rival.js'):globalThis.SandRival;
@@ -34,7 +35,7 @@
   const jarMouth=j=>({...CART_MOUTH,x:j.x,y:CART_MOUTH.y-j.lift});
   class World{
     constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){if(level.jars.length>4)throw new Error("At most 4 minecarts are allowed");this.droppedBags=[];this.level=level;this.seed=seed>>>0;this.rocks=level.rocks.map((r,id)=>({...r,id,angle:r.angle||0,omega:0,vx:0,vy:0,warning:0,phase:'stable',broken:false}));this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.timeLimit=level.timeLimit??60;this.endCause=null;this.started=true;this.state='playing';this.reason='';this.collected=0;this.score=0;this.losses={'wrong-color':0,missed:0,stolen:0};this.interactions=[];this.frameFailure=null;this.treasures=(level.treasures||[]).map((t,i)=>({...t,id:i,r:t.r||16,opened:false}));this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,intact:true,balls:[],flash:0}));this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,alive:true,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
-      this.crew=new Crew(this);
+      this.cargo=new Cargo(this);this.crew=new Crew(this);
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
       this.total=this.balls.length;this.targetScore=level.targetScore??this.total*10;this.rival=level.mechanics.rival?new Rival({...level,rocks:this.rocks},this.balls):null;this.hazards=new Hazards(this);
     }
@@ -54,7 +55,7 @@
       for(const w of this.worms)if(w.alive)this.moveWorm(w,dt);
       this.crew.step(dt);
     }
-    receive(j,b,contact={x:b.x,y:jarMouth(j).y,mouthX:j.x}){if(!b.active||!j?.intact)return;b.active=false;this.score+=10;j.balls.push(b.color);j.flash=1;this.collected++;this.catches.push({...contact,offset:contact.x-contact.mouthX,color:b.color,material:b.type,r:b.r});this.events.push({type:'collect',x:contact.x,y:contact.y,color:b.color,count:this.collected});}
+    receive(j,b,contact={x:b.x,y:jarMouth(j).y,mouthX:j.x}){if(!b.active||!j?.intact)return;if(!this.cargo.freeSlots(j)){this.cargo.bounce(j,b,contact);return;}b.active=false;this.score+=b.value??10;this.cargo.store(j,b);j.flash=1;this.collected++;this.catches.push({...contact,offset:contact.x-contact.mouthX,color:b.color,material:b.type,r:b.r});this.events.push({type:'collect',x:contact.x,y:contact.y,color:b.color,count:this.collected});}
     resolveBead(b,outcome,contact={},jar=null){
       if(!b.active)return;
       if(outcome==='collected'){this.receive(jar||this.jars.find(j=>j.color===b.color&&j.intact),b,Object.keys(contact).length?contact:undefined);return;}
@@ -62,18 +63,18 @@
       this.frameFailure={kind:outcome,x:contact.x??b.x,y:contact.y??b.y,r:b.r,material:b.type,color:b.color,...contact,ball:b};
     }
     recoverableBag(){const r=this.rival;if(!r||r.escaped)return[];const active=this.balls.some(b=>b.active),bombChance=this.bombs.some(b=>b.state==='burning'||b.state==='idle'&&active);return r.torn||r.fleeing||bombChance||r.bag.length+this.balls.filter(b=>b.active).length>6?r.bag:[];}
-    remainingPotential(){const active=[...this.balls.filter(b=>b.active),...this.droppedBags.flatMap(b=>b.balls)],recoverable=this.recoverableBag();return [...active,...recoverable].reduce((sum,b)=>sum+(this.jars.some(j=>j.intact&&j.color===b.color)?10:0),0)+(active.length||recoverable.length?this.treasures.filter(t=>!t.opened).reduce((sum,t)=>sum+t.points,0):0);}
+    remainingPotential(){const active=[...this.balls.filter(b=>b.active),...this.droppedBags.flatMap(b=>b.balls)],recoverable=this.recoverableBag();return this.cargo.availablePotential([...active,...recoverable])+(active.length||recoverable.length?this.treasures.filter(t=>!t.opened).reduce((sum,t)=>sum+t.points,0):0);}
     queueInteraction(e){this.interactions.push({...e,u:Math.max(0,Math.min(1,e.u??1))});}
     resolveInteractions(){
       const priority={treasure:0,collect:1,damage:2,theft:3,loss:4,trigger:5};
       while(this.interactions.length&&this.state==='playing'){
-        this.interactions.sort((a,b)=>a.u-b.u||(priority[a.kind]??4)-(priority[b.kind]??4));const u=this.interactions[0].u;
+        this.interactions.sort((a,b)=>a.u-b.u||(priority[a.kind]??4)-(priority[b.kind]??4));const u=this.interactions[0].u;this.contactU=u;
         while(this.interactions.some(e=>Math.abs(e.u-u)<1e-7)&&this.state==='playing'){
           this.interactions.sort((a,b)=>a.u-b.u||(priority[a.kind]??4)-(priority[b.kind]??4));this.interactions.shift().apply();
         }
         this.checkOutcome(false);
       }
-      this.interactions.length=0;this.checkOutcome();
+      this.interactions.length=0;delete this.contactU;this.checkOutcome();
     }
     get timeRemaining(){return Math.max(0,this.timeLimit-this.time);}
     checkOutcome(settleDeadline=true){
@@ -91,7 +92,7 @@
     freezeCrossing(b,contact,mouths){
       // Render loss at the same instant used by the swept catch test, including moving carts.
       for(let i=0;i<this.jars.length;i++){const j=this.jars[i];j.x=mouths[i].x+(j.x-mouths[i].x)*contact.u;}
-      b.x=contact.x;b.y=contact.y;
+      this.cargo.sync();b.x=contact.x;b.y=contact.y;
     }
     collide(b){
       for(let iteration=0;iteration<9;iteration++){let nx=0,ny=0,hits=0;for(const[dx,dy]of samples)if(this.terrain.solid(b.x+dx*b.r,b.y+dy*b.r)){nx-=dx;ny-=dy;hits++;}if(!hits)break;const n=Math.hypot(nx,ny);if(n<.01){b.y-=1;continue;}nx/=n;ny/=n;b.x+=nx*.8;b.y+=ny*.8;const vn=b.vx*nx+b.vy*ny;if(vn<0){if(vn<-90&&this.time-b.hitAt>.16){this.events.push({type:'hit',speed:-vn});b.hitAt=this.time;}b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}b.vx*=.985;}
@@ -115,7 +116,7 @@
           // A center inside the painted opening rolls over the lip into the cart.
           // Do not silently inset the aperture by the radius of each bead material.
           if(Math.abs(offset)>now.halfWidth+1e-7){if(!missed||Math.abs(offset)<Math.abs(missed.offset))missed={...contact,offset,j};continue;}
-          this.queueInteraction({u,kind:'collect',apply:()=>{if(!b.active)return;if(j.intact&&j.color===b.color)this.resolveBead(b,'collected',contact,j);else this.resolveBead(b,'wrong-color',{...contact,target:j.color,targetX:mouthX,targetY:now.y});}});
+          this.queueInteraction({u,kind:'collect',apply:()=>{if(!b.active)return;if(j.intact&&!this.cargo.freeSlots(j)){this.cargo.bounce(j,b,contact);return;}if(j.intact&&j.color===b.color)this.resolveBead(b,'collected',contact,j);else this.resolveBead(b,'wrong-color',{...contact,target:j.color,targetX:mouthX,targetY:now.y});}});
           missed=null;break;
         }
         if(missed)this.queueInteraction({u:missed.u,kind:'loss',apply:()=>this.resolveBead(b,'missed',{x:missed.x,y:missed.y,mouthX:missed.mouthX,u:missed.u,offset:missed.offset,targetX:missed.mouthX,targetY:missed.y})});
@@ -125,9 +126,9 @@
       this.resolveInteractions();
       for(const j of this.jars)j.flash=Math.max(0,j.flash-dt*2);
     }
-    end(won,reason='',failure=null,cause=null){this.endCause=cause;this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
+    end(won,reason='',failure=null,cause=null){this.cargo.finishAt(this.contactU??1);this.endCause=cause;this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{operator:this.operator?{...this.operator}:null,droppedBags:this.droppedBags.map(b=>({x:b.x,y:b.y,count:b.balls.length,age:b.age})),...this.hazards.snapshot(),state:this.state,endCause:this.endCause,timeLimit:this.timeLimit,timeRemaining:Number(this.timeRemaining.toFixed(3)),qualified:this.score>=this.targetScore,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color,held:!!b.held})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{operator:this.operator?{...this.operator}:null,droppedBags:this.droppedBags.map(b=>({x:b.x,y:b.y,count:b.balls.length,age:b.age})),...this.hazards.snapshot(),state:this.state,endCause:this.endCause,timeLimit:this.timeLimit,timeRemaining:Number(this.timeRemaining.toFixed(3)),qualified:this.score>=this.targetScore,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color,held:!!b.held})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length,capacity:j.capacity,rockLoad:this.cargo.rockLoad(j),freeSlots:this.cargo.freeSlots(j),cargo:j.balls.map(b=>({color:b.color,type:b.type,value:b.value??10,x:j.x+b.cargoX,y:jarMouth(j).y+b.cargoY}))}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,CART_MOUTH,rating,budgets};
 });
