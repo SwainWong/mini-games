@@ -3,13 +3,13 @@
   const {W,H,BOTTOM:SOIL_BOTTOM,GW,CELL,STEP,World,jarMouth,CART_MOUTH}=SandCore,levels=SandLevels;
   const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),$=s=>document.querySelector(s);
   const colors={amber:{light:'#fff9c8',mid:'#ffd35a',base:'#f28a15',dark:'#975012',label:'琥珀'},blue:{light:'#e8fcff',mid:'#75dcff',base:'#2494dd',dark:'#24549a',label:'冰蓝'},jade:{light:'#eaffc9',mid:'#9cee9c',base:'#37ad7e',dark:'#26734e',label:'青玉'},rose:{light:'#fff0fb',mid:'#ffaad6',base:'#df5ba6',dark:'#972d7a',label:'玫瑰'}};
-  const features={worm:['〰','蚯蚓'],porter:['♟','摇杆操作员'],rival:['⚑','盗宝人']};
+  const features={worm:['〰','蚯蚓'],porter:['♟','方向盘操作员'],rival:['⚑','盗宝人']};
   const typeLabels={glass:'● 玻璃·顺滑',heavy:'⊕ 重力·更沉',rubber:'◎ 弹力·回弹',light:'◇ 轻盈·慢落'};
   const soil=document.createElement('canvas'),texture=document.createElement('canvas'),earth=document.createElement('canvas');soil.width=texture.width=earth.width=W;soil.height=texture.height=SOIL_BOTTOM;earth.height=H;
   const wall=document.createElement('canvas');wall.width=W;wall.height=SOIL_BOTTOM+12;const wc=wall.getContext('2d');let wallRevision=-1;
   const sc=soil.getContext('2d'),tc=texture.getContext('2d'),ec=earth.getContext('2d'),sound=new SandAudio(),best=new Map(),bestSand=new Map(),bestScores=new Map();
-  const art={porter:new Image(),rival:new Image(),props:new Image(),cart:new Image(),actions:new Image(),loot:new Image(),motion:new Image(),bomb:new Image(),operator:new Image(),panic:new Image(),blast:new Image()};let assetsReady=false;
-  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=name==='blast'?'assets/blast-v13.png':name==='operator'?'assets/operator-v13.png':name==='panic'?'assets/panic-blast-v13.png':name==='motion'?'assets/rival-motion-v12.png':name==='bomb'?'assets/bomb-kit-v12.png':name==='actions'?'assets/rival-actions-v10.png':name==='loot'?'assets/mining-props-v10.png':`assets/${name}-${name==='props'?'v7':'v8'}.png`;})));
+  const art={porter:new Image(),rival:new Image(),props:new Image(),cart:new Image(),actions:new Image(),loot:new Image(),motion:new Image(),bomb:new Image(),operator:new Image(),panic:new Image(),blast:new Image(),wheel:new Image(),controls:new Image()};let assetsReady=false;
+  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=name==='wheel'?'assets/operator-wheel-v14.png':name==='controls'?'assets/control-props-v14.png':name==='blast'?'assets/blast-v13.png':name==='operator'?'assets/operator-v13.png':name==='panic'?'assets/panic-blast-v13.png':name==='motion'?'assets/rival-motion-v12.png':name==='bomb'?'assets/bomb-kit-v12.png':name==='actions'?'assets/rival-actions-v10.png':name==='loot'?'assets/mining-props-v10.png':`assets/${name}-${name==='props'?'v7':'v8'}.png`;})));
   const sessionSeen=new Set();let pendingIntro=[],floaters=[],bursts=[];
   let world,current=0,brush=24,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],dust=[],rivalDust=0,wormDust=new Map(),seed=42,lastHud='',finished=false,motionCheck=0,stillFor=0,motionPositions=[];
   function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
@@ -103,6 +103,7 @@
     ctx.strokeStyle=p.base;ctx.lineWidth=rimWidth;roundRect(ctx,x-halfWidth-rimWidth/2,y-halfHeight-rimWidth/2,halfWidth*2+rimWidth,halfHeight*2+rimWidth,5);ctx.stroke();ctx.strokeStyle=p.light;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-halfWidth+5,y-halfHeight-rimWidth/2);ctx.lineTo(x+halfWidth-5,y-halfHeight-rimWidth/2);ctx.stroke();
     const badge=ctx.createLinearGradient(x,y+22,x,y+42);badge.addColorStop(0,p.base);badge.addColorStop(1,p.dark);ctx.fillStyle=badge;roundRect(ctx,x-22,y+21,44,19,5);ctx.fill();ctx.strokeStyle=p.light;ctx.lineWidth=.8;ctx.stroke();
     ctx.fillStyle='#fffaf0';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(p.label+(jar.balls.length?' '+jar.balls.length:''),x,y+34);
+    if(world.operator?.phase==='control'&&world.operator.activeJar===world.jars.indexOf(jar)){ctx.fillStyle=p.light;ctx.shadowColor=p.mid;ctx.shadowBlur=5;ctx.beginPath();ctx.arc(x-30,y+31,3,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
     if(jar.flash>0){ctx.globalAlpha=jar.flash;ctx.strokeStyle='#fff6ac';ctx.lineWidth=4;roundRect(ctx,x-49,y-9,98,18,5);ctx.stroke();}ctx.restore();
   }
   function jarDraw(jar){
@@ -126,13 +127,30 @@
   }
   const spriteFrames=Array.from({length:6},(_,i)=>[i%3*512,Math.floor(i/3)*512,512,512]);
   function atlasSprite(img,columns,rows,frame,x,y,w,h,dir=1){const cw=img.width/columns,ch=img.height/rows;ctx.save();ctx.translate(x,y);ctx.scale(dir,1);ctx.drawImage(img,frame%columns*cw,Math.floor(frame/columns)*ch,cw,ch,-w/2,-h/2,w,h);ctx.restore();}
-  function emptyConsole(){const img=art.operator,cw=img.width/3,ch=img.height/2;ctx.drawImage(img,cw*2.42,ch*.46,cw*.48,ch*.52,282,676,40,49);ctx.fillStyle='#a74e3a';ctx.beginPath();ctx.arc(312,692,2,0,Math.PI*2);ctx.fill();}
+  const signalOrder=['amber','jade','blue','rose'];
+  function controlSignals(){
+    const o=world.operator;if(!o)return;const x=525,y=686,h=84,w=84;
+    atlasSprite(art.controls,3,2,1,x,y,w,h);
+    // Measured lens centers in the generated post; socket and glow share anchors.
+    const centers=[.254,.431,.607,.789];
+    for(let i=0;i<4;i++){const color=signalOrder[i],cy=y-h/2+h*centers[i],available=world.jars.some(j=>j.color===color&&j.intact),lit=available&&o.phase==='control'&&o.signalColor===color;
+      ctx.save();ctx.globalAlpha=lit?1:available?.18:.04;atlasSprite(art.controls,3,2,2+i,x,cy,26,26);ctx.restore();
+      ctx.font='bold 8px sans-serif';ctx.textAlign='right';ctx.fillStyle=lit?colors[color].dark:'#92683f';ctx.fillText(colors[color].label,x-12,cy+3);
+    }
+  }
+  function emptyConsole(){atlasSprite(art.controls,3,2,0,451,696,64,76);}
   function porterDraw(){
     if(!assetsReady||!world.operator)return;const o=world.operator,t=world.time;
-    // One physical control station; running sprites never take it along.
-    if(o.phase==='gone'||o.phase==='flee'){emptyConsole();if(o.phase==='flee')atlasSprite(art.operator,3,2,4+Math.floor(t*12)%2,o.x,682+Math.sin(t*25)*1.5,94,94);}
-    else{const frame=o.phase==='scared'?(o.age<.45?2:3):world.porters.some(p=>p.moving)?Math.floor(t*6)%2:0;atlasSprite(art.operator,3,2,frame,280,681,96,96);}
-    ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#765333';ctx.fillText(o.phase==='gone'||o.phase==='flee'?'控制台无人 · 矿车已停':o.phase==='scared'?'受惊刹车':'单轨控制台',280,738);
+    controlSignals();
+    if(o.phase==='gone'||o.phase==='flee'){emptyConsole();if(o.phase==='flee')atlasSprite(art.operator,3,2,4+Math.floor(t*12)%2,o.x,692+Math.sin(t*25)*1.5,90,90);}
+    else{const active=o.activeJar!==null&&world.jars[o.activeJar]?.intact,point=active&&o.pointTime>0&&o.phase==='control';
+      const pose=o.phase==='scared'?5:point?(o.pointDirection<0?3:4):o.steering<-.05?1:o.steering>.05?2:0;
+      // Blend neutral and steering poses as wheel effort changes, so hands do not
+      // jump between sprites at every velocity sign change.
+      if(pose===1||pose===2){const blend=Math.min(1,Math.abs(o.steering)*1.5);ctx.save();ctx.globalAlpha=1-blend;if(blend<1)atlasSprite(art.wheel,3,2,0,448,694,98,90);ctx.globalAlpha=blend;atlasSprite(art.wheel,3,2,pose,448,694,98,90);ctx.restore();}
+      else atlasSprite(art.wheel,3,2,pose,448,694,98,90);
+    }
+    ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillStyle='#765333';ctx.fillText(o.phase==='gone'||o.phase==='flee'?'无人控制 · 车队停机':o.phase==='scared'?'受惊刹车':o.signalColor?colors[o.signalColor].label+' · '+(o.speed<-.5?'向左':o.speed>.5?'向右':'接管中'):'车队停机',445,750);
   }
   const digHands=[[228,330],[222,45],[104,48],[297,249],[220,302],[220,316],[182,188],[165,165],[352,236],[238,129],[76,133]];
   function motionSprite(frame,x,y,size=68,dir=1){const cw=art.motion.width/4,ch=art.motion.height/3;ctx.save();ctx.translate(x,y);ctx.scale(dir,1);ctx.drawImage(art.motion,frame%4*cw,Math.floor(frame/4)*ch,cw,ch,-size/2,0,size,size);ctx.restore();}
@@ -178,7 +196,7 @@
   }
   function isPaused(){return !assetsReady||document.hidden||$('#level-dialog').open||$('#rules-dialog').open;}
   function resetInput(){releasePointer();cursor=null;accumulator=0;lastTime=performance.now();}
-  function drawCodexArt(){if(!assetsReady)return;for(const c of document.querySelectorAll('.codex-art')){const cx=c.getContext('2d'),id=c.dataset.element;cx.clearRect(0,0,88,70);if(id==='porter')cx.drawImage(art.operator,0,0,art.operator.width/3,art.operator.height/2,9,0,70,70);else if(id==='rival')cx.drawImage(art[id],0,0,512,512,9,0,70,70);else if(id==='rock')cx.drawImage(art.props,654,173,583,444,5,8,78,54);else if(id==='worm')cx.drawImage(art.props,24,845,590,275,4,17,80,37);else if(id==='bomb')bombArt(cx,0,44,35,70,60);else if(['bag','chest'].includes(id)){const cell=art.loot.width/2,frame={bag:0,chest:1,bomb:2}[id];cx.drawImage(art.loot,frame%2*cell,Math.floor(frame/2)*cell,cell,cell,9,0,70,70);}else if(id==='score'||id==='multi'){cx.drawImage(art.cart,0,0,1572,1001,0,9,88,56);}else{marble(cx,44,34,22,{heavy:'amber',rubber:'jade',light:'blue'}[id]);cx.fillStyle='#fff9df';cx.strokeStyle='#644734';cx.lineWidth=2;cx.font='bold 24px sans-serif';cx.textAlign='center';cx.strokeText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);cx.fillText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);}}}
+  function drawCodexArt(){if(!assetsReady)return;for(const c of document.querySelectorAll('.codex-art')){const cx=c.getContext('2d'),id=c.dataset.element;cx.clearRect(0,0,88,70);if(id==='porter')cx.drawImage(art.wheel,0,0,art.wheel.width/3,art.wheel.height/2,9,0,70,70);else if(id==='rival')cx.drawImage(art[id],0,0,512,512,9,0,70,70);else if(id==='rock')cx.drawImage(art.props,654,173,583,444,5,8,78,54);else if(id==='worm')cx.drawImage(art.props,24,845,590,275,4,17,80,37);else if(id==='bomb')bombArt(cx,0,44,35,70,60);else if(['bag','chest'].includes(id)){const cell=art.loot.width/2,frame={bag:0,chest:1,bomb:2}[id];cx.drawImage(art.loot,frame%2*cell,Math.floor(frame/2)*cell,cell,cell,9,0,70,70);}else if(id==='score'||id==='multi'){cx.drawImage(art.cart,0,0,1572,1001,0,9,88,56);}else{marble(cx,44,34,22,{heavy:'amber',rubber:'jade',light:'blue'}[id]);cx.fillStyle='#fff9df';cx.strokeStyle='#644734';cx.lineWidth=2;cx.font='bold 24px sans-serif';cx.textAlign='center';cx.strokeText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);cx.fillText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);}}}
   function openCodex(first){resetInput();const ids=first?pendingIntro:Object.keys(SandCodex.entries);$('#codex-title').textContent=first?'新发现 · 先认识再开采':'矿场图鉴';$('#codex-close').hidden=first;$('#codex-confirm').hidden=!first;$('#rules-dialog').dataset.first=String(first);const content=$('#codex-content');content.replaceChildren();for(const id of ids){const entry=SandCodex.entries[id],card=document.createElement('article'),h=document.createElement('h3'),p=document.createElement('p');h.textContent=entry.icon+' '+entry.name;p.textContent=entry.text;const preview=document.createElement('canvas');preview.className='codex-art';preview.width=88;preview.height=70;preview.dataset.element=id;card.append(preview,h,p);content.append(card);}$('#rules-dialog').showModal();content.scrollTop=0;drawCodexArt();}
   $('#codex-confirm').addEventListener('click',()=>{for(const id of pendingIntro)sessionSeen.add(id);pendingIntro=[];$('#rules-dialog').close();resetInput();});
   $('#codex-close').addEventListener('click',()=>{if($('#rules-dialog').dataset.first!=='true')$('#rules-dialog').close();});
@@ -201,6 +219,6 @@
   document.querySelectorAll('[data-brush]').forEach(b=>b.addEventListener('click',()=>{brush=Number(b.dataset.brush);document.querySelectorAll('[data-brush]').forEach(btn=>{const active=Number(btn.dataset.brush)===brush;btn.classList.toggle('selected',active);btn.setAttribute('aria-pressed',String(active));});}));
   $('#sound').addEventListener('click',async()=>{const button=$('#sound');button.disabled=true;try{const on=await sound.toggle();button.setAttribute('aria-label',on?'关闭音效':'开启音效');button.setAttribute('aria-pressed',String(on));button.title=on?'关闭音效':'开启音效';$('#sound-label').textContent=on?'音效 开':'音效 关';$('#sound-waves').setAttribute('d',on?'M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14':'m16 9 5 6m0-6-5 6');}catch(e){status(e.message);}finally{button.disabled=false;}});
   document.addEventListener('visibilitychange',()=>{lastTime=performance.now();accumulator=0;releasePointer();});
-  window.sandGame=Object.freeze({snapshot:()=>({level:current+1,...world.snapshot(),assetsReady,paused:isPaused(),seen:[...sessionSeen],pendingIntro:[...pendingIntro],visual:{grains:particles.length,dust:dust.length,workerHeight:96,operatorCount:world.operator&&world.operator.phase!=='gone'?1:0,blastFrames:bursts.filter(b=>b.type==='blast').map(b=>({x:b.x,y:b.y,progress:1-b.life})),rivalHeight:68,railY:646},brush,soundEnabled:sound.enabled,audioPlayed:sound.played,best:[...best],bestSand:[...bestSand],bestScores:[...bestScores]}),levels:()=>levels.map(l=>({id:l.id,title:l.title,features:[...l.features]}))});
+  window.sandGame=Object.freeze({snapshot:()=>({level:current+1,...world.snapshot(),assetsReady,paused:isPaused(),seen:[...sessionSeen],pendingIntro:[...pendingIntro],visual:{grains:particles.length,dust:dust.length,workerHeight:90,operatorFacing:'mine',controlPosition:{x:448,y:694},signalColor:world.operator?.signalColor||null,pointing:!!(world.operator?.phase==='control'&&world.operator?.pointTime>0),operatorCount:world.operator&&world.operator.phase!=='gone'?1:0,blastFrames:bursts.filter(b=>b.type==='blast').map(b=>({x:b.x,y:b.y,progress:1-b.life})),rivalHeight:68,railY:646},brush,soundEnabled:sound.enabled,audioPlayed:sound.played,best:[...best],bestSand:[...bestSand],bestScores:[...bestScores]}),levels:()=>levels.map(l=>({id:l.id,title:l.title,features:[...l.features]}))});
   load(0);requestAnimationFrame(frame);assetLoad.then(()=>{assetsReady=true;drawCodexArt();$('#loading').hidden=true;lastTime=performance.now();}).catch(e=>{$('#loading-text').textContent=e.message;$('#reload-assets').hidden=false;});$('#reload-assets').addEventListener('click',()=>location.reload());
 })();

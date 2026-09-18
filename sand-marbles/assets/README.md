@@ -114,3 +114,10 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 - `operator-v13.png`：3×2 图集，双摇杆操作、受惊、退后、两步逃跑；脚下控制台不会随人逃走。提示词：`operator-v13-prompt.md`。
 - `panic-blast-v13.png`：4×2 图集，上排为盗宝人惊吓、弃袋、两步逃跑；下排初版爆炸未采用（上下格有轻微串图）。提示词：`panic-blast-v13-prompt.md`。
 - `blast-v13.png`：独立 4×1 爆炸图集，闪光、火球、烟团、消散；实际效果在同一个爆点播放，不改变逻辑伤害范围。提示词：`blast-v13-prompt.md`。
+
+## v14 方向盘控制台
+
+使用内置 Image 工具先生成并保存原始透明 PNG，再应用到游戏：
+- `operator-wheel-v14.png`：3×2，面向矿区的背面操作员与方向盘；中立、左转、右转、指左、指右、惊吓六姿势。提示词：`operator-wheel-v14-prompt.md`。
+- `control-props-v14.png`：3×2，空置方向盘台、四灯矿井信号柱、琥珀/青玉/冰蓝/玫瑰发光灯片。提示词：`control-props-v14-prompt.md`。
+- 运行时按单个驱动目标选择灯色，按实际车速选择转向姿势；转向图与中立图使用互补透明度。

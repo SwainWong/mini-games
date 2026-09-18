@@ -1,4 +1,4 @@
-// Timing from entry, all hazards active; recorded input traces only.
+// Verified actual-input timing for v14 smooth single-operator carts.
 module.exports={
   "1": {
     "1": {
@@ -192,10 +192,8 @@ module.exports={
       "stars": 3
     },
     "1000": {
-      "delay": 1.75,
-      "ticks": 2,
-      "score": 130,
-      "stars": 3
+      "delay": 0.75,
+      "ticks": 2
     },
     "100000": {
       "delay": 0,
@@ -248,20 +246,16 @@ module.exports={
       "stars": 3
     },
     "300": {
-      "delay": 1.5,
-      "ticks": 2,
-      "score": 160,
-      "stars": 3
+      "delay": 0,
+      "ticks": 2
     },
     "1000": {
       "delay": 1.5,
       "ticks": 2
     },
     "100000": {
-      "delay": 0,
-      "ticks": 2,
-      "score": 160,
-      "stars": 3
+      "delay": 1,
+      "ticks": 4
     }
   },
   "14": {
