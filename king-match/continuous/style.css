@@ -4,3 +4,5 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 
 .overlay.won{padding-top:45%;background:transparent}
+
+#sound{border:1px solid #a88d5e66;border-radius:7px;background:#21303a;padding:6px 9px;min-height:44px;font-size:11px;margin-right:12px;white-space:nowrap}
