@@ -1,5 +1,5 @@
 /* Fifteen composed maps. Solutions live only in test fixtures. */
-(function(root,factory){const levels=factory();if(typeof module==='object')module.exports=levels;else root.SandLevels=levels;})(globalThis,()=>([
+(function(root,factory){const levels=factory();if(typeof module==='object')module.exports=levels;else root.SandLevels=levels;})(globalThis,()=>{const levels=[
   {
     "id": 1,
     "title": "斜坡初体验",
@@ -1408,4 +1408,17 @@
       "two": 1154
     }
   }
-]));
+];
+  const targets=[40,80,80,80,90,120,70,100,150,130,150,170,160,230,260];
+  const crew=[0,0,1,1,1,1,1,1,2,2,2,3,2,4,4];
+  const loot={6:[[225,365,20]],7:[[205,250,20]],8:[[185,460,20]],9:[[155,475,20],[365,420,20]],10:[[420,295,20]],11:[[275,385,20],[495,415,20]],12:[[300,430,20],[245,190,20]],13:[[270,420,20],[420,255,30]],14:[[210,510,20],[420,420,20]],15:[[200,545,20],[365,515,20],[120,190,30]]};
+  const bombs={8:[[300,455,0]],11:[[295,505,1]],14:[[455,430,0]],15:[[160,405,0],[420,535,1]]};
+  for(const [i,level]of levels.entries()){
+    level.targetScore=targets[i];level.mechanics.crewCount=crew[i];
+    if(level.mechanics.rival)level.mechanics.rival.speed=i<5?30:i<10?34:38;
+    level.treasures=(loot[level.id]||[]).map(([x,y,points])=>({x,y,points,r:16,kind:points===30?'chest':'bag'}));
+    level.bombs=(bombs[level.id]||[]).map(([x,y,rock])=>({pad:{x,y},rock}));
+    level.note=`同色入车 +10，接错不扣分。达到 ${targets[i]} 分即可通关。`;
+  }
+  return levels;
+});

@@ -1,3 +1,20 @@
+# v10 积分矿场补充素材
+
+内置 Image 生成，2026-09-18。先生成再接入；原始 PNG 保留 Alpha，不进行程序重绘。盗宝人沿用 rival-v8 的身份和暖色 2.5D 雕塑质感，新增六状态；道具采用同一光照和材质。用户的经典矿工游戏图片仅作棕色土层与木金属 HUD 的方向参考，未复制图片或标识。
+
+- `rival-actions-v10.png`：1536×1024，3×2、512 像素单元；擦汗、喝水、侧耳、装袋、眩晕、疲惫。
+- `mining-props-v10.png`：1254×1254，2×2、627 像素单元；问号袋、宝箱、炸药、破矿车。提示要求 1024，但渲染按生成文件实际尺寸切片。
+
+### 盗宝人完整提示词
+
+Use case: stylized-concept. Production transparent sprite atlas for a mining game. Reference image defines SAME mischievous bearded thief with purple hat brass goggles, purple jacket brown pants leather boots tan treasure sack, same warm sculpted 2.5D cartoon look. Create SIX new FULL BODY poses in exactly 3 columns x2 rows on1536x1024 (512px cells), centered consistent scale, feet baseline470, hat top55, ample transparent margins. Faces generally right, front-three-quarter. Top left: tired wiping sweat with forearm, other hand on hip. Top middle: drinking from small turquoise water flask tipped to lips. Top right: listening intently hand cupped behind ear, leaning forward wide eyes. Bottom left: opening own treasure sack and stuffing a small glowing gem inside. Bottom middle: dizzy, sitting on ground, one hand rubbing head, three small stars circling above. Bottom right: panting exhausted hands on knees, hunched but full body visible. No shovel/no extra tools, no text, no background or ground. Actual alpha transparent background, isolated clean silhouettes. Readable at60px height, expressive clearly different actions. Original cartoon game style, not flat vector.
+
+### 道具完整提示词
+
+Use case: stylized-concept. Game production sprite atlas, 2 columns x2 rows on1024x1024, each object isolated fully within512px square cell with generous margins. Genuine alpha transparent background. Same warm sculpted 2.5D cartoon mining adventure style, ochre earth palette, thick rounded silhouettes, soft top-left highlights and occlusion, polished but readable at40px. Top left: tied chunky tan leather treasure pouch, large embossed cream question mark '?' on its front, gold coins peeking from tied opening. Top right: small closed honey-brown oak treasure chest, antique brass corner bands and chunky blue-green clasp, no letters. Bottom left: cartoon red dynamite bundle tied with rope, curled unlit fuse ending at top right, no words, no flames. Bottom right: broken small wood and iron mining cart, squat wide open front-three-quarter view, cracked wooden front, one bent wheel, tilted rim, no gems, no character. No scenery, floor, background shadows, borders, logos, gore or people. Keep consistent warm lighting and material style across four objects.
+
+---
+
 # v8 · 小矿工与接珠矿车
 
 先由内置 Image 生成以下素材，再实现游戏；均为本项目新生成并保留真实透明 Alpha。v8 游戏加载这三张及 `props-v7.png`。旧素材仅保留为历史记录。

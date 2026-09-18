@@ -1,6 +1,8 @@
 /* Shared deterministic terrain, scoring and physics. No DOM, network or persistence. */
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.SandCore=api;})(globalThis,()=>{
   'use strict';
+  const Crew=typeof module==='object'?require('./cart-crew.js'):globalThis.SandCrew;
+  const Hazards=typeof module==='object'?require('./hazards.js'):globalThis.SandHazards;
   const Rival=typeof module==='object'?require('./rival.js'):globalThis.SandRival;
   const W=560,H=760,BOTTOM=564,CELL=2,GW=W/CELL,GH=BOTTOM/CELL,STEP=1/120;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -9,9 +11,11 @@
   function rating(state,dug,budget){return state!=='won'?0:dug<=budget.three?3:dug<=budget.two?2:1;}
   class Terrain{
     constructor(rocks=[]){this.grid=new Uint8Array(GW*GH).fill(1);this.rockMask=new Uint8Array(GW*GH);this.playerCells=0;this.revision=0;this.changes=[];
-      for(const rock of rocks)for(let gy=Math.max(0,Math.floor((rock.y-rock.ry)/CELL));gy<Math.min(GH,(rock.y+rock.ry)/CELL);gy++)for(let gx=Math.max(0,Math.floor((rock.x-rock.rx)/CELL));gx<Math.min(GW,(rock.x+rock.rx)/CELL);gx++)if(((gx*2+1-rock.x)/rock.rx)**2+((gy*2+1-rock.y)/rock.ry)**2<=1)this.rockMask[gy*GW+gx]=1;
+      this.rebuildRockMask(rocks);
     }
-    solid(x,y){if(x<0||x>=W||y<0)return true;if(y>=BOTTOM)return false;return this.grid[Math.floor(y/2)*GW+Math.floor(x/2)]===1;}
+    rebuildRockMask(rocks){this.rockMask.fill(0);let changed=false;for(const r of rocks){if(r.broken)continue;for(let gy=Math.max(0,Math.floor((r.y-r.ry)/2));gy<Math.min(GH,(r.y+r.ry)/2);gy++)for(let gx=Math.max(0,Math.floor((r.x-r.rx)/2));gx<Math.min(GW,(r.x+r.rx)/2);gx++)if(((gx*2+1-r.x)/r.rx)**2+((gy*2+1-r.y)/r.ry)**2<=1){const i=gy*GW+gx;this.rockMask[i]=1;if(this.grid[i]){this.grid[i]=0;this.changes.push(i);changed=true;}}}if(changed)this.revision++;}
+    sandSolid(x,y){if(x<0||x>=W||y<0)return true;if(y>=BOTTOM)return false;return this.grid[Math.floor(y/2)*GW+Math.floor(x/2)]===1;}
+    solid(x,y){return this.sandSolid(x,y)||(x>=0&&x<W&&y>=0&&y<BOTTOM&&this.rockMask[Math.floor(y/2)*GW+Math.floor(x/2)]===1);}
     dig(x,y,r=24,source='player'){
       if(y<51||y>BOTTOM+r)return 0;let removed=0;
       const xa=clamp(Math.floor((x-r)/2),0,GW-1),xb=clamp(Math.ceil((x+r)/2),0,GW-1),ya=clamp(Math.floor((y-r)/2),0,GH-1),yb=clamp(Math.ceil((y+r)/2),0,GH-1);
@@ -28,29 +32,17 @@
   const CART_MOUTH=Object.freeze({y:590,halfWidth:46,halfHeight:7,rimWidth:3});
   const jarMouth=j=>({...CART_MOUTH,x:j.x,y:CART_MOUTH.y-j.lift});
   class World{
-    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=true;this.state='playing';this.reason='';this.collected=0;this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,balls:[],flash:0}));this.porter=null;this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
-      if(level.mechanics.porter)this.choosePorter();
+    constructor(level,{seed=Math.floor(Math.random()*4294967296)}={}){this.level=level;this.seed=seed>>>0;this.rocks=level.rocks.map((r,id)=>({...r,id,vy:0,warning:0,phase:'stable',broken:false}));this.terrain=setupTerrain(level);this.budget=budgets(level);this.time=0;this.started=true;this.state='playing';this.reason='';this.collected=0;this.score=0;this.losses={'wrong-color':0,missed:0,stolen:0};this.interactions=[];this.frameFailure=null;this.treasures=(level.treasures||[]).map((t,i)=>({...t,id:i,r:t.r||16,opened:false}));this.catches=[];this.events=[];this.effects={wormCells:0,porterTrips:0};this.balls=[];this.jars=level.jars.map(j=>({...j,homeX:j.x,lift:0,intact:true,balls:[],flash:0}));this.failure=null;this.worms=(level.mechanics.worms||[]).map((w,i)=>({...w,alive:true,homeX:w.x,homeY:w.y,vx:Math.cos(w.angle??i*2.1)*w.speed,vy:Math.sin(w.angle??i*2.1)*w.speed}));
+      this.crew=new Crew(this);
       for(const group of level.groups)for(let i=0;i<group.count;i++){const type=group.types?.[i%group.types.length]||group.type||'glass',spec=TYPES[type],row=Math.floor(i/3),col=i%3,count=Math.min(3,group.count-row*3);this.balls.push({x:group.x+(col-(count-1)/2)*22,y:group.y+18-row*22,vx:0,vy:0,color:group.color,type,...spec,active:true,hitAt:-1});}
-      this.total=this.balls.length;this.rival=level.mechanics.rival?new Rival(level,this.balls):null;
+      this.total=this.balls.length;this.targetScore=level.targetScore??this.total*10;this.rival=level.mechanics.rival?new Rival({...level,rocks:this.rocks},this.balls):null;this.hazards=new Hazards(this);
     }
     dig(a,b,r=24){if(this.state!=='playing')return 0;return this.terrain.line(a,b,r);}
     random(){this.seed=(Math.imul(this.seed,1664525)+1013904223)>>>0;return this.seed/4294967296;}
-    choosePorter(){
-      // One worker is assigned to a random cart for the level; keep the grip continuous across trips.
-      const index=this.porter?.jar??Math.floor(this.random()*this.jars.length),jar=this.jars[index];
-      const left=Math.max(104,...this.jars.filter(j=>j.homeX<jar.homeX).map(j=>j.homeX+96)),right=Math.min(W-104,...this.jars.filter(j=>j.homeX>jar.homeX).map(j=>j.homeX-96));
-      const reach=this.level.mechanics.porterRange||90,direction=this.random()<.5?-1:1;let offset=direction*Math.min(reach,direction<0?jar.homeX-left:right-jar.homeX);if(Math.abs(offset)<12)offset=-direction*Math.min(reach,direction<0?right-jar.homeX:jar.homeX-left);
-      // Every trip has bounded but different strides and readable pauses. No teleporting jar.
-      const stride=.42+this.random()*.25,short=.35+this.random()*.3;
-      const pause=()=>.35+this.random()*.3,walk=()=>.3+this.random()*.22;
-      const phases=[['grip',.28,0],['walk',walk(),stride],['rest',pause(),stride],['walk',walk(),1],
-        [this.random()<.5?'wipe':'think',.65+this.random()*.3,1],['return',walk(),short],
-        [this.random()<.5?'think':'rest',pause(),short],['return',walk(),0],['home',4.2+this.random()*1.2,0]];
-      this.porter={jar:index,phase:'grip',phaseIndex:0,elapsed:0,offset,progress:0,moving:false,phases};this.effects.porterTrips++;
-    }
+    get porter(){return this.porters?.[0]||null;}
     wormPoint(w){return{x:w.x,y:w.y};}
     moveWorm(w,dt){
-      const clear=(x,y)=>x>=20&&x<=W-20&&y>=80&&y<=BOTTOM-25&&this.level.rocks.every(r=>((x-r.x)/(r.rx+19))**2+((y-r.y)/(r.ry+19))**2>1);
+      const clear=(x,y)=>x>=20&&x<=W-20&&y>=80&&y<=BOTTOM-25&&this.rocks.filter(r=>!r.broken).every(r=>((x-r.x)/(r.rx+19))**2+((y-r.y)/(r.ry+19))**2>1);
       let x=w.x+w.vx*dt,y=w.y+w.vy*dt;
       if(x<w.homeX-w.range||x>w.homeX+w.range||!clear(x,w.y)){w.vx=-w.vx;x=w.x+w.vx*dt;}
       if(y<w.homeY-w.depth||y>w.homeY+w.depth||!clear(w.x,y)){w.vy=-w.vy;y=w.y+w.vy*dt;}
@@ -58,13 +50,38 @@
       if(clear(x,y)){const removed=this.terrain.line([w.x,w.y],[x,y],17,'worm');w.dug=(w.dug||0)+removed;this.effects.wormCells+=removed;w.x=x;w.y=y;}
     }
     mechanisms(dt){
-      for(const w of this.worms)this.moveWorm(w,dt);
-      if(this.porter){const p=this.porter,j=this.jars[p.jar],phases=p.phases;p.elapsed+=dt;let phase=phases[p.phaseIndex];
-        if(p.elapsed>=phase[1]){p.elapsed-=phase[1];p.phaseIndex++;if(p.phaseIndex===phases.length){j.x=j.homeX;j.lift=0;this.choosePorter();return;}phase=phases[p.phaseIndex];this.events.push({type:['rest','wipe','think'].includes(phase[0])?'rest':'shuffle'});}
-        p.phase=phase[0];p.moving=p.phase==='walk'||p.phase==='return';const u=clamp(p.elapsed/phase[1],0,1),ease=u*u*(3-2*u),from=phases[Math.max(0,p.phaseIndex-1)][2];p.progress=from+(phase[2]-from)*ease;j.x=j.homeX+p.offset*p.progress;j.lift=0;
-      }
+      for(const w of this.worms)if(w.alive)this.moveWorm(w,dt);
+      this.crew.step(dt);
     }
-    receive(j,b,contact={x:b.x,y:jarMouth(j).y,mouthX:j.x}){b.active=false;j.balls.push(b.color);j.flash=1;this.collected++;this.catches.push({...contact,offset:contact.x-contact.mouthX,color:b.color,material:b.type,r:b.r});this.events.push({type:'collect',x:contact.x,y:contact.y,color:b.color,count:this.collected});}
+    receive(j,b,contact={x:b.x,y:jarMouth(j).y,mouthX:j.x}){if(!b.active||!j?.intact)return;b.active=false;this.score+=10;j.balls.push(b.color);j.flash=1;this.collected++;this.catches.push({...contact,offset:contact.x-contact.mouthX,color:b.color,material:b.type,r:b.r});this.events.push({type:'collect',x:contact.x,y:contact.y,color:b.color,count:this.collected});}
+    resolveBead(b,outcome,contact={},jar=null){
+      if(!b.active)return;
+      if(outcome==='collected'){this.receive(jar||this.jars.find(j=>j.color===b.color&&j.intact),b,Object.keys(contact).length?contact:undefined);return;}
+      b.active=false;b.stolen=outcome==='stolen';this.losses[outcome]++;this.events.push({type:'loss',outcome,x:contact.x??b.x,y:contact.y??b.y,color:b.color});
+      this.frameFailure={kind:outcome,x:contact.x??b.x,y:contact.y??b.y,r:b.r,material:b.type,color:b.color,...contact,ball:b};
+    }
+    remainingPotential(){const active=this.balls.filter(b=>b.active);return active.reduce((sum,b)=>sum+(this.jars.some(j=>j.intact&&j.color===b.color)?10:0),0)+(active.length?this.treasures.filter(t=>!t.opened).reduce((sum,t)=>sum+t.points,0):0);}
+    queueInteraction(e){this.interactions.push({...e,u:Math.max(0,Math.min(1,e.u??1))});}
+    resolveInteractions(){
+      const priority={treasure:0,collect:1,damage:2,theft:3,loss:4,trigger:5};
+      while(this.interactions.length&&this.state==='playing'){
+        this.interactions.sort((a,b)=>a.u-b.u||(priority[a.kind]??4)-(priority[b.kind]??4));const u=this.interactions[0].u;
+        while(this.interactions.some(e=>Math.abs(e.u-u)<1e-7)&&this.state==='playing'){
+          this.interactions.sort((a,b)=>a.u-b.u||(priority[a.kind]??4)-(priority[b.kind]??4));this.interactions.shift().apply();
+        }
+        this.checkOutcome();
+      }
+      this.interactions.length=0;this.checkOutcome();
+    }
+    checkOutcome(){
+      if(this.state!=='playing')return;
+      if(this.score>=this.targetScore){this.end(true);return;}
+      const remaining=this.remainingPotential();if(this.score+remaining>=this.targetScore)return;
+      const f=this.frameFailure;if(f?.ball&&f.u!==undefined&&this.stepMouths)this.freezeCrossing(f.ball,f,this.stepMouths);
+      const failure=f?Object.fromEntries(Object.entries(f).filter(([k])=>k!=='ball')):{kind:'unreachable'};
+      if(failure.mouthX!==undefined)failure.targetX=failure.mouthX;
+      this.end(false,`当前 ${this.score} + 剩余最高 ${remaining} < 目标 ${this.targetScore}。积分已不足，重来试试另一条路线。`,failure);
+    }
     freezeCrossing(b,contact,mouths){
       // Render loss at the same instant used by the swept catch test, including moving carts.
       for(let i=0;i<this.jars.length;i++){const j=this.jars[i];j.x=mouths[i].x+(j.x-mouths[i].x)*contact.u;}
@@ -72,16 +89,16 @@
     }
     collide(b){
       for(let iteration=0;iteration<9;iteration++){let nx=0,ny=0,hits=0;for(const[dx,dy]of samples)if(this.terrain.solid(b.x+dx*b.r,b.y+dy*b.r)){nx-=dx;ny-=dy;hits++;}if(!hits)break;const n=Math.hypot(nx,ny);if(n<.01){b.y-=1;continue;}nx/=n;ny/=n;b.x+=nx*.8;b.y+=ny*.8;const vn=b.vx*nx+b.vy*ny;if(vn<0){if(vn<-90&&this.time-b.hitAt>.16){this.events.push({type:'hit',speed:-vn});b.hitAt=this.time;}b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}b.vx*=.985;}
-      for(const rock of this.level.rocks){const dx=b.x-rock.x,dy=b.y-rock.y,rx=rock.rx+b.r,ry=rock.ry+b.r,d=Math.sqrt(dx*dx/(rx*rx)+dy*dy/(ry*ry));if(d<1){const angle=Math.atan2(dy/ry,dx/rx);b.x=rock.x+Math.cos(angle)*rx;b.y=rock.y+Math.sin(angle)*ry;let nx=Math.cos(angle)/rx,ny=Math.sin(angle)/ry;const n=Math.hypot(nx,ny);nx/=n;ny/=n;const vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}}}
+      for(const rock of this.rocks.filter(r=>!r.broken)){const dx=b.x-rock.x,dy=b.y-rock.y,rx=rock.rx+b.r,ry=rock.ry+b.r,d=Math.sqrt(dx*dx/(rx*rx)+dy*dy/(ry*ry));if(d<1){const angle=Math.atan2(dy/ry,dx/rx);b.x=rock.x+Math.cos(angle)*rx;b.y=rock.y+Math.sin(angle)*ry;let nx=Math.cos(angle)/rx,ny=Math.sin(angle)/ry;const n=Math.hypot(nx,ny);nx/=n;ny/=n;const vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=(1+b.bounce)*vn*nx;b.vy-=(1+b.bounce)*vn*ny;}}}
     }
     step(dt=STEP){
-      if(this.state!=='playing')return;const mouths=this.jars.map(jarMouth);for(const b of this.balls){b.previousX=b.x;b.previousY=b.y;}if(this.started){this.time+=dt;this.mechanisms(dt);}
+      if(this.state!=='playing')return;this.interactions=[];this.frameFailure=null;const mouths=this.jars.map(jarMouth);this.stepMouths=mouths;for(const b of this.balls){b.previousX=b.x;b.previousY=b.y;}if(this.started){this.time+=dt;this.mechanisms(dt);this.hazards.step(dt);}
       for(const b of this.balls){if(!b.active)continue;const gravity=b.gravity;
         b.vy=clamp(b.vy+gravity*dt,-220,390);b.vx=clamp(b.vx*.999,-180,180);b.x+=b.vx*dt;b.y+=b.vy*dt;this.collide(b);
       }
       for(let repeat=0;repeat<3;repeat++)for(let i=0;i<this.balls.length;i++){const a=this.balls[i];if(!a.active)continue;for(let j=i+1;j<this.balls.length;j++){const b=this.balls[j];if(!b.active)continue;let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>=a.r+b.r)continue;if(d<.001){dx=.01;dy=.01;d=Math.hypot(dx,dy);}const nx=dx/d,ny=dy/d,overlap=a.r+b.r-d,ia=1/a.mass,ib=1/b.mass,inv=ia+ib;a.x-=nx*overlap*ia/inv;a.y-=ny*overlap*ia/inv;b.x+=nx*overlap*ib/inv;b.y+=ny*overlap*ib/inv;const relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(relative<0){const impulse=-(1+Math.min(a.bounce,b.bounce))*relative/inv;a.vx-=impulse*nx*ia;a.vy-=impulse*ny*ia;b.vx+=impulse*nx*ib;b.vy+=impulse*ny*ib;}}this.collide(a);}
       for(const b of this.balls){
-        if(!b.active)continue;let missed=null;
+        if(!b.active)continue;this.hazards.touchBead(b);let missed=null;
         for(let i=0;i<this.jars.length;i++){
           const j=this.jars[i],before=mouths[i],now=jarMouth(j),above=b.previousY-before.y,below=b.y-now.y;
           // Swept crossing in the moving mouth's frame, never the jar's home position.
@@ -91,22 +108,19 @@
           // A center inside the painted opening rolls over the lip into the cart.
           // Do not silently inset the aperture by the radius of each bead material.
           if(Math.abs(offset)>now.halfWidth+1e-7){if(!missed||Math.abs(offset)<Math.abs(missed.offset))missed={...contact,offset,j};continue;}
-          if(j.color!==b.color){this.freezeCrossing(b,contact,mouths);this.end(false,'珠子落入了不同颜色的矿车。失误位置已圈出，可以查看本次路径。',{kind:'wrong-color',...contact,r:b.r,material:b.type,color:b.color,target:j.color,targetX:j.x,targetY:now.y});return;}
-          this.receive(j,b,contact);break;
+          this.queueInteraction({u,kind:'collect',apply:()=>{if(!b.active)return;if(j.intact&&j.color===b.color)this.resolveBead(b,'collected',contact,j);else this.resolveBead(b,'wrong-color',{...contact,target:j.color,targetX:mouthX,targetY:now.y});}});
+          missed=null;break;
         }
-        if(b.active&&missed){
-          // Resolve at the rim crossing, before the bead/cart drift to misleading later positions.
-          this.freezeCrossing(b,missed,mouths);this.end(false,'珠子从车斗开口外侧落下。画面已停在错过车沿的瞬间，可查看后重来。',{kind:'missed',x:missed.x,y:missed.y,mouthX:missed.mouthX,offset:missed.offset,r:b.r,material:b.type,color:b.color,targetX:missed.j.x,targetY:missed.y});return;
-        }
-        if(b.active&&b.y>620){this.end(false,'珠子错过了车斗开口。矿车会移动，留意它停下的位置和时机。',{kind:'missed',x:b.x,y:b.y,r:b.r,material:b.type,color:b.color});return;}
+        if(missed)this.queueInteraction({u:missed.u,kind:'loss',apply:()=>this.resolveBead(b,'missed',{x:missed.x,y:missed.y,mouthX:missed.mouthX,u:missed.u,offset:missed.offset,targetX:missed.mouthX,targetY:missed.y})});
+        else if(b.y>620)this.queueInteraction({u:1,kind:'loss',apply:()=>this.resolveBead(b,'missed',{x:b.x,y:b.y})});
       }
-      if(this.collected===this.total)this.end(true);
-      else if(this.started&&this.rival){this.rival.step(this,dt);if(this.state!=='playing')return;}
+      if(this.started&&this.rival)this.rival.step(this,dt);
+      this.resolveInteractions();
       for(const j of this.jars)j.flash=Math.max(0,j.flash-dt*2);
     }
     end(won,reason='',failure=null){this.failure=failure;this.state=won?'won':'lost';this.reason=reason;this.events.push({type:this.state});}
     get stars(){return rating(this.state,this.terrain.units,this.budget);}
-    snapshot(){return{state:this.state,collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porter?{...this.porter}:null,jars:this.jars.map(j=>({color:j.color,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
+    snapshot(){return{...this.hazards.snapshot(),state:this.state,score:this.score,targetScore:this.targetScore,remainingPotential:this.remainingPotential(),losses:{...this.losses},collected:this.collected,catches:this.catches.map(c=>({...c})),total:this.total,dug:this.terrain.units,stars:this.stars,budget:this.budget,time:Math.round(this.time*10)/10,effects:{...this.effects},worms:this.worms.map(w=>({alive:w.alive,x:w.x,y:w.y,vx:w.vx,vy:w.vy})),balls:this.balls.filter(b=>b.active).map(b=>({x:Math.round(b.x),y:Math.round(b.y),type:b.type,color:b.color})),failure:this.failure?{...this.failure}:null,rival:this.rival?.snapshot()||null,porter:this.porters[0]?{...this.porters[0]}:null,porters:this.porters.map(p=>({...p})),jars:this.jars.map(j=>({color:j.color,intact:j.intact,x:j.x,homeX:j.homeX,mouthY:jarMouth(j).y,count:j.balls.length}))};}
   }
   return{W,H,BOTTOM,CELL,GW,GH,STEP,TYPES,Terrain,World,jarMouth,CART_MOUTH,rating,budgets};
 });

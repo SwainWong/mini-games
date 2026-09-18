@@ -30,6 +30,12 @@
       else if(event==='rest'){this.voice(140,.16,.022,0,'triangle');this.voice(115,.22,.018,.17,'triangle');}
       else if(event==='rival-dig')this.noise(.07,1300,.018);
       else if(event==='danger'){this.voice(210,.07,.025,0,'triangle');this.voice(240,.07,.02,.13,'triangle');}
+      else if(event==='treasure'){[660,880,1320].forEach((f,i)=>this.voice(f,.2,.04,i*.06));}
+      else if(event==='ignite')this.noise(.35,4200,.022);
+      else if(event==='blast'||event==='cart-broken'){this.noise(.4,450,.08);this.voice(65,.3,.06,0,'triangle');}
+      else if(event==='stun'){this.voice(450,.18,.035);this.voice(620,.22,.025,.12);}
+      else if(event==='loss')this.voice(180,.08,.016);
+      else if(event==='listen')this.voice(900,.08,.02);
       else if(event==='worm')this.noise(.12,450,.022);
       else this.voice(660,.14,.035);
     }
