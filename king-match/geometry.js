@@ -45,5 +45,18 @@ function rectUnion(p,boxes,left=-Infinity,right=Infinity){
  const q=candidates[0],dx=q.x-p.x,dy=q.y-p.y,d=Math.hypot(dx,dy),nx=dx/d,ny=dy/d,vn=(p.vx||0)*nx+(p.vy||0)*ny;
  p.x=q.x;p.y=q.y;if(vn<0){p.vx-=vn*nx;p.vy-=vn*ny;}return true;
 }
-const api={RAMP,RAMP_BOUNDS,rampTop,ROOF_NORMAL,nearRamp,PLATFORM,BEAM,contact,project,boxDepth,rectUnion};if(typeof module!=='undefined')module.exports=api;else root.KingGeometry=api;
+// Resolve a grain against the hinged flap AND the ramp/wall union. The last
+// valid position is a contact fallback, never a jump across a narrow wedge.
+function gateContact(p,poly){
+ const valid=q=>q.x+q.r<=408+.00001&&q.x-q.r>=24-.00001&&contact(q,poly).depth<.00001&&(!nearRamp(q)||contact(q,RAMP).depth<.00001);
+ if(valid(p))return {x:p.x,y:p.y};
+ const candidates=[];
+ if(Number.isFinite(p.px)&&valid({...p,x:p.px,y:p.py}))candidates.push({x:p.px,y:p.py});
+ for(const reverse of [false,true]){const q={...p};for(let i=0;i<12;i++){
+  if(reverse){project(q,poly);if(nearRamp(q))project(q,RAMP);}else{if(nearRamp(q))project(q,RAMP);project(q,poly);}
+  q.x=Math.max(24+q.r,Math.min(408-q.r,q.x));if(valid(q)){candidates.push(q);break;}
+ }}
+ candidates.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y));return candidates[0]||null;
+}
+const api={gateContact,RAMP,RAMP_BOUNDS,rampTop,ROOF_NORMAL,nearRamp,PLATFORM,BEAM,contact,project,boxDepth,rectUnion};if(typeof module!=='undefined')module.exports=api;else root.KingGeometry=api;
 })(globalThis);
