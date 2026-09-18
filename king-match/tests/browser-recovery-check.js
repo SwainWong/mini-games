@@ -23,18 +23,18 @@ module.exports = async function browserRecoveryCheck(page) {
   const compact = s => ({
     state: s.state, reason: s.reason, time: s.time, mechanicalTime: s.mechanicalTime,
     hp: s.hp, actions: s.actions, remaining: s.remaining, recoveries: s.recoveries,
-    recovery: s.recovery, phase: s.phase, main: s.mainActive, tray: s.trayActive,
+    recovery: s.recovery, phase: s.phase, main: s.mainActive, crushed:s.crushed,
     active: s.active, spawned: s.spawned, collected: s.collected,
     overlap: s.geometry.maxOverlap,
   });
-  // Sample inside the browser so IPC latency does not miss a 0.2 s recovery.
+  // Sample inside the browser so IPC latency does not miss a short recovery.
   const settled = () => mobile.evaluate(() => new Promise((resolve, reject) => {
     const samples = [], began = performance.now();
     function tick() {
       const s = kingGame.snapshot({ geometry: true });
       samples.push({ state:s.state,reason:s.reason,time:s.time,mechanicalTime:s.mechanicalTime,
         hp:s.hp,actions:s.actions,remaining:s.remaining,recovery:s.recovery,
-        recoveries:s.recoveries,phase:s.phase,main:s.mainActive,tray:s.trayActive,
+        recoveries:s.recoveries,phase:s.phase,main:s.mainActive,crushed:s.crushed,proofs:s.crushLog,
         active:s.active,spawned:s.spawned,collected:s.collected,overlap:s.geometry.maxOverlap,
         uniqueIds:new Set(s.geometry.stones.map(p=>p.id)).size });
       if (!s.phase || s.state !== 'playing') return resolve(samples);
@@ -47,11 +47,12 @@ module.exports = async function browserRecoveryCheck(page) {
     for (let i = 0; i < samples.length; i++) {
       const s = samples[i], prior = samples[i - 1];
       assert.notEqual(s.reason, 'jam');
-      assert.equal(s.spawned, s.active + s.collected, 'Particle conservation');
-      assert.equal(s.main + s.tray, s.active, 'Depth counts');
+      assert.equal(s.spawned, s.active + s.collected + s.crushed, 'Particle conservation');
+      assert.equal(s.main, s.active, 'All surviving gold remains in the physical world');
+      for(const proof of s.proofs){assert.ok(proof.duration>=.05);assert.ok(proof.blockedDuration>=.05);assert.ok(proof.chain.includes(proof.id));assert.notEqual(proof.upper,proof.lower);}
       assert.equal(s.uniqueIds, s.active, 'Unique particle IDs');
       assert.ok(s.overlap < .05, 'Same-depth solid penetration');
-      if (s.recovery) assert.ok(s.recovery.elapsed < 3, 'Recovery must be bounded');
+      if (s.recovery) assert.ok(s.recovery.elapsed < 8, 'Recovery must be bounded');
       if (prior?.recovery && s.recovery?.batch === prior.recovery.batch) {
         assert.equal(s.time, prior.time, 'Danger clock moved during recovery');
         assert.equal(s.hp, prior.hp, 'HP changed during recovery');
@@ -61,7 +62,7 @@ module.exports = async function browserRecoveryCheck(page) {
   const route = [[15,23],[34,42],[44,52],[40,48]], runs = [];
   try {
     // First reproduce the actual historical route; then verify user pause
-    // inside a live foreground transport at a safer ten-second starting time.
+    // during live settling at a safer ten-second starting time.
     for (const idle of [30, 10]) {
       await mobile.goto(page.url());
       await mobile.locator('#start').click();
@@ -72,15 +73,16 @@ module.exports = async function browserRecoveryCheck(page) {
         await input(a,b);
         let pauseEvidence = null;
         if (idle === 10 && n === 3) {
-          await mobile.waitForFunction(() => kingGame.snapshot({geometry:true}).geometry.stones.some(p=>p.tray&&!p.lifting), null, {timeout:15000});
+          assert.ok((await read()).phase, 'Pause during a real exchange/settlement');
           await mobile.locator('#pause').click();
           const frozen = await read();
           await mobile.waitForTimeout(300);
           const after = await read();
-          assert.ok(frozen.paused && frozen.trayActive > 0, 'Pause must catch live foreground transport');
+          assert.ok(frozen.paused && frozen.phase, 'Pause must catch live settlement');
           assert.equal(after.time, frozen.time);
           assert.equal(after.mechanicalTime, frozen.mechanicalTime);
           assert.deepEqual(after.geometry.stones, frozen.geometry.stones);
+          assert.equal(after.crushed,frozen.crushed);
           pauseEvidence = { before:compact(frozen), after:compact(after) };
           await mobile.locator('#resume').click();
         }

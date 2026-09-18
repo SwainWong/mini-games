@@ -1,3 +1,48 @@
+# v10 积分矿场补充素材
+
+内置 Image 生成，2026-09-18。先生成再接入；原始 PNG 保留 Alpha，不进行程序重绘。盗宝人沿用 rival-v8 的身份和暖色 2.5D 雕塑质感，新增六状态；道具采用同一光照和材质。用户的经典矿工游戏图片仅作棕色土层与木金属 HUD 的方向参考，未复制图片或标识。
+
+- `rival-actions-v10.png`：1536×1024，3×2、512 像素单元；擦汗、喝水、侧耳、装袋、眩晕、疲惫。
+- `mining-props-v10.png`：1254×1254，2×2、627 像素单元；问号袋、宝箱、炸药、破矿车。提示要求 1024，但渲染按生成文件实际尺寸切片。
+
+### 盗宝人完整提示词
+
+Use case: stylized-concept. Production transparent sprite atlas for a mining game. Reference image defines SAME mischievous bearded thief with purple hat brass goggles, purple jacket brown pants leather boots tan treasure sack, same warm sculpted 2.5D cartoon look. Create SIX new FULL BODY poses in exactly 3 columns x2 rows on1536x1024 (512px cells), centered consistent scale, feet baseline470, hat top55, ample transparent margins. Faces generally right, front-three-quarter. Top left: tired wiping sweat with forearm, other hand on hip. Top middle: drinking from small turquoise water flask tipped to lips. Top right: listening intently hand cupped behind ear, leaning forward wide eyes. Bottom left: opening own treasure sack and stuffing a small glowing gem inside. Bottom middle: dizzy, sitting on ground, one hand rubbing head, three small stars circling above. Bottom right: panting exhausted hands on knees, hunched but full body visible. No shovel/no extra tools, no text, no background or ground. Actual alpha transparent background, isolated clean silhouettes. Readable at60px height, expressive clearly different actions. Original cartoon game style, not flat vector.
+
+### 道具完整提示词
+
+Use case: stylized-concept. Game production sprite atlas, 2 columns x2 rows on1024x1024, each object isolated fully within512px square cell with generous margins. Genuine alpha transparent background. Same warm sculpted 2.5D cartoon mining adventure style, ochre earth palette, thick rounded silhouettes, soft top-left highlights and occlusion, polished but readable at40px. Top left: tied chunky tan leather treasure pouch, large embossed cream question mark '?' on its front, gold coins peeking from tied opening. Top right: small closed honey-brown oak treasure chest, antique brass corner bands and chunky blue-green clasp, no letters. Bottom left: cartoon red dynamite bundle tied with rope, curled unlit fuse ending at top right, no words, no flames. Bottom right: broken small wood and iron mining cart, squat wide open front-three-quarter view, cracked wooden front, one bent wheel, tilted rim, no gems, no character. No scenery, floor, background shadows, borders, logos, gore or people. Keep consistent warm lighting and material style across four objects.
+
+---
+
+# v8 · 小矿工与接珠矿车
+
+先由内置 Image 生成以下素材，再实现游戏；均为本项目新生成并保留真实透明 Alpha。v8 游戏加载这三张及 `props-v7.png`。旧素材仅保留为历史记录。
+
+| 文件 | 实际尺寸 | 用途 |
+|---|---|---|
+| `porter-v8.png` | 1536×1024 | 3×2：左右脚推行、拉车、擦汗、思考、庆祝 |
+| `rival-v8.png` | 1536×1024 | 3×2：准备、下铲、回拉、两步奔跑、抢珠；铲子按实际接触点绘制 |
+| `cart-v8.png` | 1572×1001 | 独立空矿车；车斗、标签和收集数跟随物理位置 |
+
+沿用 v7 暖光雕塑感的 2.5D 风格。矿工生成时参考旧矿工身份与材质，盗宝人参考新矿工材质。手掌、开口、车轮位置以实际生成结果重新测量，不盲用提示中的坐标。动作帧固定手掌握点，脚在轨道前侧行走；矿车开口中心映射到逻辑 y=590，车轮底部在 y≈646 的轨面。图像文件直接作为静态资源，无外部图片服务或运行时生成。
+
+## v8 最终提示词
+
+### porter-v8.png
+
+Use case stylized-concept. New transparent sprite atlas for same game, reference is identity/material STYLE only. Six FULL BODY SMALL SLIM miner poses in exactly 3 columns x2 rows on1536x1024, each cell512x512. Friendly bearded worker yellow helmet teal overalls brown gloves boots, polished 2.5D animated-film 3D warm left lighting. Slim agile proportions, NOT huge muscular or stocky, body about160px wide, height380px in each cell, centered. Side view facing RIGHT, pushing an invisible minecart handle to his right. NO jar, NO cart, NO wheel, NO tools, no floor, no text. BOTH HANDS to right, hands contact invisible handle at same local x400 y270 in all pushing poses, feet baseline470, helmet top70. Poses: top-left push left leg forward; top-middle push right leg forward; top-right lean backward braking/pulling handle; bottom-left hold handle with one hand and wipe forehead with other; bottom-middle one hand stays handle while other scratches chin thoughtfully; bottom-right celebrating successful catch fist raised, other hand still on handle. Entire full-body within each cell with ample transparent margin. Actual transparent alpha background. Crisp readable silhouettes for 45x65px game sprites.
+
+### cart-v8.png
+
+Use case stylized-concept. Production game sprite: ONE small empty minecart on real transparent alpha background, isolated no floor no rails no characters no text. Polished 2.5D animated-film sculpted style, warm light upper left, soft volume and bevels. Orthographic near-FRONT view very slightly above, symmetrical. A squat wide open-top minecart: thick dark steel rim and weathered warm oak side panels with iron corner brackets and bolts, two large round steel wheels seen on the FRONT face at lower left and right, wheel axles aligned horizontal. Wide open dark empty receiving compartment with horizontal elliptical/rounded rectangle opening spanning 80 percent of total cart width. Short and wide shape about2:1, opening readily accessible for falling gems. Small horizontal metal pushing handles extending a LITTLE outward on BOTH left and right sides at half body height. Crop generous margins around full cart including wheels and side handles. Sharp readable silhouette for a110x70px game sprite. No gems inside, no lid, no shadows outside sprite, no landscape.
+
+### rival-v8.png
+
+Use case stylized-concept. Reference is polished 2.5D material/render STYLE only. New sprite atlas six poses, exactly3 columns2 rows on1536x1024, transparent alpha. SAME slim mischievous adult treasure thief in each cell: purple explorer hat with brass goggles, purple jacket, tan bulging treasure sack on back, brown gloves boots. Full body facing RIGHT side-three-quarter view, consistent height400px and baseline470, each inside512x512cell with margins. NO shovel, NO pickaxe, NO tool is drawn: engine will animate shovel precisely at the hands! Hands together to right at waist height local x390 y275 gripping an INVISIBLE shaft. Poses:1 crouched ready to dig,2 drive both hands forward/down for digging stroke,3 pull hands back to lift dirt,4 left-foot running stride hands held at waist,5 right-foot running stride hands at waist,6 triumphant grin one fist lifted with one hand open at waist ready to grab a gem. Clear slim silhouette readable at50x60px, expressive eyebrow changes, small athletic body not enormous. Warm light upper left, sculpted rounded 3D volume, no backdrop, no ground, no text, no lines between cells.
+
+---
+
 # v7 · 统一 2.5D 美术
 
 先使用内置 **Image** 工具生成素材，再实现游戏。全部 PNG 保留真实透明 Alpha，随静态站点发布；没有图片 API 或运行时生成。旧 v6 文件保留作为历史素材。

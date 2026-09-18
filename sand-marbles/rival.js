@@ -4,17 +4,17 @@
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   class Rival{
     constructor(level,balls){
-      this.rocks=level.rocks;this.speed=level.mechanics.rival.speed;this.age=0;this.phase='watching';this.danger='distant';this.distance=null;this.target=null;this.path=[];this.repath=0;this.fx=1;this.fy=0;this.removed=0;this.captured=null;
+      this.rocks=level.rocks;this.stamina=100;this.resting=false;this.restAge=0;this.stunTime=0;this.hearingCooldown=0;this.listenTime=0;this.sprint=0;this.bagTime=0;this.speed=level.mechanics.rival.speed;this.age=0;this.phase='watching';this.danger='distant';this.distance=null;this.target=null;this.path=[];this.repath=0;this.fx=1;this.fy=0;this.removed=0;this.captured=null;
       const starts=[{x:48,y:76},{x:512,y:76}].filter(p=>this.clear(p.x,p.y));
       const initial=balls.filter(b=>b.active);starts.sort((a,b)=>Math.min(...initial.map(p=>distance(b,p)))-Math.min(...initial.map(p=>distance(a,p))));
       const start=starts[0]||{x:28,y:76};this.x=start.x;this.y=start.y;this.fx=start.x>280?-1:1;
       this.blocked=Array.from({length:COLS*ROWS},(_,i)=>!this.clear((i%COLS+.5)*SIZE,(Math.floor(i/COLS)+.5)*SIZE));
     }
-    clear(x,y){return x>=42&&x<=518&&y>=58&&y<=548&&this.rocks.every(r=>((x-r.x)/(r.rx+RADIUS+3))**2+((y-r.y)/(r.ry+RADIUS+3))**2>1);}
+    clear(x,y){return x>=42&&x<=518&&y>=58&&y<=548&&this.rocks.filter(r=>!r.broken).every(r=>((x-r.x)/(r.rx+RADIUS+3))**2+((y-r.y)/(r.ry+RADIUS+3))**2>1);}
     lineClear(a,b){const n=Math.ceil(distance(a,b)/4);for(let k=1;k<=n;k++)if(!this.clear(a.x+(b.x-a.x)*k/n,a.y+(b.y-a.y)*k/n))return false;return true;}
     canReach(from,ball){
       if(distance(from,ball)>=ball.r+26)return false;
-      const n=Math.max(1,Math.ceil(distance(from,ball)/3));for(let i=1;i<=n;i++){const x=from.x+(ball.x-from.x)*i/n,y=from.y+(ball.y-from.y)*i/n;if(this.rocks.some(r=>((x-r.x)/r.rx)**2+((y-r.y)/r.ry)**2<=1))return false;}return true;
+      const n=Math.max(1,Math.ceil(distance(from,ball)/3));for(let i=1;i<=n;i++){const x=from.x+(ball.x-from.x)*i/n,y=from.y+(ball.y-from.y)*i/n;if(this.rocks.filter(r=>!r.broken).some(r=>((x-r.x)/r.rx)**2+((y-r.y)/r.ry)**2<=1))return false;}return true;
     }
     route(target){
       const reachPoint={x:Math.max(42,Math.min(518,target.x)),y:Math.max(58,Math.min(548,target.y))};
@@ -30,28 +30,37 @@
       }
       return[];
     }
+    refreshObstacles(){this.blocked=Array.from({length:COLS*ROWS},(_,i)=>!this.clear((i%COLS+.5)*SIZE,(Math.floor(i/COLS)+.5)*SIZE));}
+    stun(world,seconds=4){this.stunTime=Math.max(this.stunTime,seconds);this.phase='stun';this.path=[];this.repath=0;this.listenTime=0;this.sprint=0;this.refreshObstacles();if(!this.clear(this.x,this.y)){let best=null,d=Infinity;for(let y=64;y<549;y+=8)for(let x=44;x<519;x+=8)if(this.clear(x,y)){const n=Math.hypot(x-this.x,y-this.y);if(n<d){d=n;best={x,y};}}if(best)Object.assign(this,best);}world.events.push({type:'stun',x:this.x,y:this.y});}
     step(world,dt){
-      this.age+=dt;const candidates=world.balls.filter(b=>b.active&&b.y<560);
+      this.age+=dt;this.hearingCooldown=Math.max(0,this.hearingCooldown-dt);this.sprint=Math.max(0,this.sprint-dt);
+      if(this.stunTime>0){this.stunTime=Math.max(0,this.stunTime-dt);this.phase='stun';return;}
+      if(this.stamina<=20&&!this.resting){this.resting=true;this.restAge=0;this.listenTime=0;this.sprint=0;}
+      if(this.resting){this.restAge+=dt;this.stamina=Math.min(100,this.stamina+26*dt);this.phase=this.restAge<.7?'wipe':this.restAge<1.5?'drink':'rest';if(this.restAge>=2&&this.stamina>=85){this.resting=false;this.repath=0;}return;}
+      if(this.bagTime>0){this.bagTime=Math.max(0,this.bagTime-dt);this.phase='bagging';return;}
+      if(this.listenTime>0){this.listenTime=Math.max(0,this.listenTime-dt);this.phase='listen';if(!this.listenTime&&this.stamina>25)this.sprint=1.3;return;}
+      if(this.hearingCooldown===0&&this.stamina>25&&world.balls.some(b=>b.active&&Math.hypot(b.vx,b.vy)>=65&&distance(this,b)<=120)){this.listenTime=.35;this.hearingCooldown=6;this.phase='listen';world.events.push({type:'listen',x:this.x,y:this.y});return;}
+      const candidates=world.balls.filter(b=>b.active&&b.y<560);
       if(!candidates.length){this.phase='searching';this.target=null;this.danger='distant';this.distance=null;return;}
-      if(this.age<.8){this.phase='watching';return;}
       this.repath-=dt;if(this.repath<=0||(this.target&&(!this.target.active||this.target.y>=560))){
-        const calm=candidates.filter(b=>Math.hypot(b.vx,b.vy)<70),choices=calm.length?calm:candidates;
+        this.refreshObstacles();const calm=candidates.filter(b=>Math.hypot(b.vx,b.vy)<70),choices=calm.length?calm:candidates;
         choices.sort((a,b)=>distance(this,a)-distance(this,b));this.target=null;this.path=[];
         for(const candidate of [...choices,...candidates.filter(b=>!choices.includes(b))]){const path=this.route(candidate);if(this.canReach(path.at(-1)||this,candidate)){this.target=candidate;this.path=path;break;}}this.repath=.35;
       }
       let next=this.path[0];while(next&&distance(this,next)<.25){this.path.shift();next=this.path[0];}
       if(next){const d=distance(this,next),dx=(next.x-this.x)/d,dy=(next.y-this.y)/d;this.fx=dx;this.fy=dy;
         const digging=world.terrain.solid(this.x+dx*34,this.y+dy*34);this.phase=digging?'digging':'running';
-        const amount=Math.min(d,this.speed*(digging?1:1.85)*(0.72+Math.max(0,Math.sin(this.age*13))*.85)*dt);
+        const energy=this.stamina>70?1.25:this.stamina<35?.65:1;const amount=Math.min(d,this.speed*(digging?1:1.65)*energy*(this.sprint>0?1.5:1)*(.75+Math.max(0,Math.sin(this.age*13))*.5)*dt);this.stamina=Math.max(0,this.stamina-((digging?10:6)+(this.sprint>0?8:0))*dt);
         const nx=this.x+dx*amount,ny=this.y+dy*amount;if(this.clear(nx,ny)){this.x=nx;this.y=ny;}else this.repath=0;
-        this.removed+=world.terrain.dig(this.x+dx*12,this.y+dy*12,17,'rival');
+        const tip=this.toolPoint();this.removed+=world.terrain.dig(tip.x,tip.y,17,'rival');
       }else this.phase='searching';
       const nearest=candidates.reduce((a,b)=>distance(this,a)<distance(this,b)?a:b);this.distance=distance(this,nearest);
       this.danger=this.distance<58?'near':this.distance<115?'approaching':'distant';
       const caught=candidates.find(b=>this.canReach(this,b));
-      if(caught){this.captured={x:caught.x,y:caught.y,color:caught.color};this.phase='caught';caught.active=false;caught.stolen=true;world.end(false,'盗宝人抢先挖到了珠子！下次要在他靠近前，把珠子送进罐子。',{kind:'stolen',x:caught.x,y:caught.y,color:caught.color});}
+      if(caught){world.queueInteraction({u:1,kind:'theft',apply:()=>{if(!caught.active||this.stunTime>0||this.resting||this.bagTime>0)return;this.bagTime=.9;this.captured={x:caught.x,y:caught.y,color:caught.color};this.phase='bagging';world.resolveBead(caught,'stolen');}});}
     }
-    snapshot(){return{x:this.x,y:this.y,phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
+    toolPoint(){return{x:this.x+this.fx*12,y:this.y+this.fy*12};}
+    snapshot(){return{stamina:this.stamina,stunTime:this.stunTime,sprint:this.sprint,resting:this.resting,x:this.x,y:this.y,tool:this.toolPoint(),phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
   }
   return Rival;
 });

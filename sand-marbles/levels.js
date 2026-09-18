@@ -1,5 +1,5 @@
 /* Fifteen composed maps. Solutions live only in test fixtures. */
-(function(root,factory){const levels=factory();if(typeof module==='object')module.exports=levels;else root.SandLevels=levels;})(globalThis,()=>([
+(function(root,factory){const levels=factory();if(typeof module==='object')module.exports=levels;else root.SandLevels=levels;})(globalThis,()=>{const levels=[
   {
     "id": 1,
     "title": "斜坡初体验",
@@ -35,7 +35,7 @@
   {
     "id": 2,
     "title": "高低两路",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "初识沙径",
     "difficulty": "入门",
     "jars": [
@@ -93,7 +93,7 @@
   {
     "id": 3,
     "title": "双泉汇流",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -155,7 +155,7 @@
   {
     "id": 4,
     "title": "石岛回廊",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -217,7 +217,7 @@
   {
     "id": 5,
     "title": "两岸连桥",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "初识沙径",
     "difficulty": "进阶",
     "jars": [
@@ -298,7 +298,7 @@
   {
     "id": 6,
     "title": "三层峡谷",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -393,7 +393,7 @@
   {
     "id": 7,
     "title": "回旋长廊",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -476,7 +476,7 @@
   {
     "id": 8,
     "title": "斜切双谷",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -557,7 +557,7 @@
   {
     "id": 9,
     "title": "四叶错层",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -659,7 +659,7 @@
   {
     "id": 10,
     "title": "断崖双泉",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "地下奇遇",
     "difficulty": "挑战",
     "jars": [
@@ -773,7 +773,7 @@
   {
     "id": 11,
     "title": "窄门分家",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -885,7 +885,7 @@
   {
     "id": 12,
     "title": "倒挂花园",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -1002,7 +1002,7 @@
   {
     "id": 13,
     "title": "地下回字湾",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -1103,7 +1103,7 @@
   {
     "id": 14,
     "title": "彩珠织巢",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -1248,7 +1248,7 @@
   {
     "id": 15,
     "title": "搬运大乱斗",
-    "note": "先观察，再动手。盗宝人会沿沙路追来，留意移动的罐口。",
+    "note": "盗宝人已经开挖！留意矿车位置，赶快疏通沙路。",
     "chapter": "沙径大师",
     "difficulty": "大师",
     "jars": [
@@ -1408,4 +1408,17 @@
       "two": 1154
     }
   }
-]));
+];
+  const targets=[40,80,80,80,90,120,70,100,150,130,150,170,160,230,260];
+  const crew=[0,0,1,1,1,1,1,1,2,2,2,3,2,4,4];
+  const loot={6:[[225,365,20]],7:[[205,250,20]],8:[[185,460,20]],9:[[155,475,20],[365,420,20]],10:[[420,295,20]],11:[[275,385,20],[495,415,20]],12:[[300,430,20],[245,190,20]],13:[[270,420,20],[420,255,30]],14:[[210,510,20],[420,420,20]],15:[[200,545,20],[365,515,20],[120,190,30]]};
+  const bombs={8:[[300,455,0]],11:[[295,505,1]],14:[[455,430,0]],15:[[160,405,0],[420,535,1]]};
+  for(const [i,level]of levels.entries()){
+    level.targetScore=targets[i];level.mechanics.crewCount=crew[i];
+    if(level.mechanics.rival)level.mechanics.rival.speed=i<5?30:i<10?34:38;
+    level.treasures=(loot[level.id]||[]).map(([x,y,points])=>({x,y,points,r:16,kind:points===30?'chest':'bag'}));
+    level.bombs=(bombs[level.id]||[]).map(([x,y,rock])=>({pad:{x,y},rock}));
+    level.note=`同色入车 +10，接错不扣分。达到 ${targets[i]} 分即可通关。`;
+  }
+  return levels;
+});
