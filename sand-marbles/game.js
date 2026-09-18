@@ -8,8 +8,8 @@
   const soil=document.createElement('canvas'),texture=document.createElement('canvas'),earth=document.createElement('canvas');soil.width=texture.width=earth.width=W;soil.height=texture.height=SOIL_BOTTOM;earth.height=H;
   const wall=document.createElement('canvas');wall.width=W;wall.height=SOIL_BOTTOM+12;const wc=wall.getContext('2d');let wallRevision=-1;
   const sc=soil.getContext('2d'),tc=texture.getContext('2d'),ec=earth.getContext('2d'),sound=new SandAudio(),best=new Map(),bestSand=new Map(),bestScores=new Map();
-  const art={porter:new Image(),rival:new Image(),props:new Image(),cart:new Image(),actions:new Image(),loot:new Image(),motion:new Image(),bomb:new Image(),operator:new Image(),panic:new Image(),blast:new Image(),wheel:new Image(),controls:new Image()};let assetsReady=false;
-  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=name==='wheel'?'assets/operator-wheel-v14.png':name==='controls'?'assets/control-props-v14.png':name==='blast'?'assets/blast-v13.png':name==='operator'?'assets/operator-v13.png':name==='panic'?'assets/panic-blast-v13.png':name==='motion'?'assets/rival-motion-v12.png':name==='bomb'?'assets/bomb-kit-v12.png':name==='actions'?'assets/rival-actions-v10.png':name==='loot'?'assets/mining-props-v10.png':`assets/${name}-${name==='props'?'v7':'v8'}.png`;})));
+  const art={porter:new Image(),rival:new Image(),props:new Image(),cart:new Image(),actions:new Image(),loot:new Image(),motion:new Image(),bomb:new Image(),operator:new Image(),panic:new Image(),blast:new Image(),wheel:new Image(),controls:new Image(),steering:new Image(),gesture:new Image()};let assetsReady=false;
+  const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=name==='steering'?'assets/operator-steering-v15.png':name==='gesture'?'assets/operator-gesture-v15.png':name==='wheel'?'assets/operator-wheel-v14.png':name==='controls'?'assets/control-props-v14.png':name==='blast'?'assets/blast-v13.png':name==='operator'?'assets/operator-v13.png':name==='panic'?'assets/panic-blast-v13.png':name==='motion'?'assets/rival-motion-v12.png':name==='bomb'?'assets/bomb-kit-v12.png':name==='actions'?'assets/rival-actions-v10.png':name==='loot'?'assets/mining-props-v10.png':`assets/${name}-${name==='props'?'v7':'v8'}.png`;})));
   const sessionSeen=new Set();let pendingIntro=[],floaters=[],bursts=[];
   let world,current=0,brush=24,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],dust=[],rivalDust=0,wormDust=new Map(),seed=42,lastHud='',finished=false,motionCheck=0,stillFor=0,motionPositions=[];
   function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
@@ -127,6 +127,12 @@
   }
   const spriteFrames=Array.from({length:6},(_,i)=>[i%3*512,Math.floor(i/3)*512,512,512]);
   function atlasSprite(img,columns,rows,frame,x,y,w,h,dir=1){const cw=img.width/columns,ch=img.height/rows;ctx.save();ctx.translate(x,y);ctx.scale(dir,1);ctx.drawImage(img,frame%columns*cw,Math.floor(frame/columns)*ch,cw,ch,-w/2,-h/2,w,h);ctx.restore();}
+  // Measured source rectangles and boot anchors: generated rows are not equal.
+  const operatorFrames={
+    steering:[[0,0,421,424,207,422],[421,0,421,424,193.5,423],[842,0,421,424,192,423],[0,424,421,408,214,406],[421,424,421,408,207,406],[842,424,421,408,207.5,406],[0,832,421,414,226.5,404],[421,832,421,414,219,404],[842,832,421,414,228,404]],
+    gesture:[[0,0,444,443,204.5,424],[444,0,443,443,207.5,425],[887,0,443,443,213,424],[1330,0,444,443,213,424],[0,443,444,444,215,425],[444,443,443,444,221.5,425],[887,443,443,444,226.5,425],[1330,443,444,444,235.5,425]]
+  };
+  function operatorSprite(kind,frame,cx=ctx,x=448,foot=738,scale=.215){const [sx,sy,sw,sh,ax,ay]=operatorFrames[kind][frame];cx.drawImage(art[kind],sx,sy,sw,sh,x-ax*scale,foot-ay*scale,sw*scale,sh*scale);}
   const signalOrder=['amber','jade','blue','rose'];
   function controlSignals(){
     const o=world.operator;if(!o)return;const x=525,y=686,h=84,w=84;
@@ -143,12 +149,15 @@
     if(!assetsReady||!world.operator)return;const o=world.operator,t=world.time;
     controlSignals();
     if(o.phase==='gone'||o.phase==='flee'){emptyConsole();if(o.phase==='flee')atlasSprite(art.operator,3,2,4+Math.floor(t*12)%2,o.x,692+Math.sin(t*25)*1.5,90,90);}
-    else{const active=o.activeJar!==null&&world.jars[o.activeJar]?.intact,point=active&&o.pointTime>0&&o.phase==='control';
-      const pose=o.phase==='scared'?5:point?(o.pointDirection<0?3:4):o.steering<-.05?1:o.steering>.05?2:0;
-      // Blend neutral and steering poses as wheel effort changes, so hands do not
-      // jump between sprites at every velocity sign change.
-      if(pose===1||pose===2){const blend=Math.min(1,Math.abs(o.steering)*1.5);ctx.save();ctx.globalAlpha=1-blend;if(blend<1)atlasSprite(art.wheel,3,2,0,448,694,98,90);ctx.globalAlpha=blend;atlasSprite(art.wheel,3,2,pose,448,694,98,90);ctx.restore();}
-      else atlasSprite(art.wheel,3,2,pose,448,694,98,90);
+    else{
+      const active=o.activeJar!==null&&world.jars[o.activeJar]?.intact,point=active&&o.pointTime>0&&o.phase==='control';
+      // Exactly one opaque actor per render. Real in-between drawings replace
+      // alpha crossfades, which produce two translucent silhouettes.
+      ctx.save();ctx.globalAlpha=1;
+      if(o.phase==='scared')atlasSprite(art.wheel,3,2,5,448,694,98,90);
+      else if(point){const elapsed=.7-o.pointTime,step=elapsed<.14?0:elapsed<.28?1:elapsed<.52?2:3;operatorSprite('gesture',(o.pointDirection<0?0:4)+step);}
+      else{const frame=Math.max(0,Math.min(8,Math.round(4+o.steering*4)));operatorSprite('steering',frame);}
+      ctx.restore();
     }
     ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillStyle='#765333';ctx.fillText(o.phase==='gone'||o.phase==='flee'?'无人控制 · 车队停机':o.phase==='scared'?'受惊刹车':o.signalColor?colors[o.signalColor].label+' · '+(o.speed<-.5?'向左':o.speed>.5?'向右':'接管中'):'车队停机',445,750);
   }
@@ -196,7 +205,7 @@
   }
   function isPaused(){return !assetsReady||document.hidden||$('#level-dialog').open||$('#rules-dialog').open;}
   function resetInput(){releasePointer();cursor=null;accumulator=0;lastTime=performance.now();}
-  function drawCodexArt(){if(!assetsReady)return;for(const c of document.querySelectorAll('.codex-art')){const cx=c.getContext('2d'),id=c.dataset.element;cx.clearRect(0,0,88,70);if(id==='porter')cx.drawImage(art.wheel,0,0,art.wheel.width/3,art.wheel.height/2,9,0,70,70);else if(id==='rival')cx.drawImage(art[id],0,0,512,512,9,0,70,70);else if(id==='rock')cx.drawImage(art.props,654,173,583,444,5,8,78,54);else if(id==='worm')cx.drawImage(art.props,24,845,590,275,4,17,80,37);else if(id==='bomb')bombArt(cx,0,44,35,70,60);else if(['bag','chest'].includes(id)){const cell=art.loot.width/2,frame={bag:0,chest:1,bomb:2}[id];cx.drawImage(art.loot,frame%2*cell,Math.floor(frame/2)*cell,cell,cell,9,0,70,70);}else if(id==='score'||id==='multi'){cx.drawImage(art.cart,0,0,1572,1001,0,9,88,56);}else{marble(cx,44,34,22,{heavy:'amber',rubber:'jade',light:'blue'}[id]);cx.fillStyle='#fff9df';cx.strokeStyle='#644734';cx.lineWidth=2;cx.font='bold 24px sans-serif';cx.textAlign='center';cx.strokeText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);cx.fillText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);}}}
+  function drawCodexArt(){if(!assetsReady)return;for(const c of document.querySelectorAll('.codex-art')){const cx=c.getContext('2d'),id=c.dataset.element;cx.clearRect(0,0,88,70);if(id==='porter')operatorSprite('steering',4,cx,44,69,.16);else if(id==='rival')cx.drawImage(art[id],0,0,512,512,9,0,70,70);else if(id==='rock')cx.drawImage(art.props,654,173,583,444,5,8,78,54);else if(id==='worm')cx.drawImage(art.props,24,845,590,275,4,17,80,37);else if(id==='bomb')bombArt(cx,0,44,35,70,60);else if(['bag','chest'].includes(id)){const cell=art.loot.width/2,frame={bag:0,chest:1,bomb:2}[id];cx.drawImage(art.loot,frame%2*cell,Math.floor(frame/2)*cell,cell,cell,9,0,70,70);}else if(id==='score'||id==='multi'){cx.drawImage(art.cart,0,0,1572,1001,0,9,88,56);}else{marble(cx,44,34,22,{heavy:'amber',rubber:'jade',light:'blue'}[id]);cx.fillStyle='#fff9df';cx.strokeStyle='#644734';cx.lineWidth=2;cx.font='bold 24px sans-serif';cx.textAlign='center';cx.strokeText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);cx.fillText({heavy:'+',rubber:'/',light:'◇'}[id],44,43);}}}
   function openCodex(first){resetInput();const ids=first?pendingIntro:Object.keys(SandCodex.entries);$('#codex-title').textContent=first?'新发现 · 先认识再开采':'矿场图鉴';$('#codex-close').hidden=first;$('#codex-confirm').hidden=!first;$('#rules-dialog').dataset.first=String(first);const content=$('#codex-content');content.replaceChildren();for(const id of ids){const entry=SandCodex.entries[id],card=document.createElement('article'),h=document.createElement('h3'),p=document.createElement('p');h.textContent=entry.icon+' '+entry.name;p.textContent=entry.text;const preview=document.createElement('canvas');preview.className='codex-art';preview.width=88;preview.height=70;preview.dataset.element=id;card.append(preview,h,p);content.append(card);}$('#rules-dialog').showModal();content.scrollTop=0;drawCodexArt();}
   $('#codex-confirm').addEventListener('click',()=>{for(const id of pendingIntro)sessionSeen.add(id);pendingIntro=[];$('#rules-dialog').close();resetInput();});
   $('#codex-close').addEventListener('click',()=>{if($('#rules-dialog').dataset.first!=='true')$('#rules-dialog').close();});

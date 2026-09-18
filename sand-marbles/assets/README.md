@@ -120,4 +120,11 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 使用内置 Image 工具先生成并保存原始透明 PNG，再应用到游戏：
 - `operator-wheel-v14.png`：3×2，面向矿区的背面操作员与方向盘；中立、左转、右转、指左、指右、惊吓六姿势。提示词：`operator-wheel-v14-prompt.md`。
 - `control-props-v14.png`：3×2，空置方向盘台、四灯矿井信号柱、琥珀/青玉/冰蓝/玫瑰发光灯片。提示词：`control-props-v14-prompt.md`。
-- 运行时按单个驱动目标选择灯色，按实际车速选择转向姿势；转向图与中立图使用互补透明度。
+- v14 曾使用互补透明度切换转向与中立姿势；该方式仍产生双轮廓，v15 已替换为完整动作帧。
+
+## v15 完整操作员动作
+
+先使用内置 Image 生成统一风格的新动作图集，保留原始透明 PNG：
+- `operator-steering-v15.png`：3×3，9帧左转到回正再到右转。完整提示词：[operator-steering-v15-prompt.md](operator-steering-v15-prompt.md)。
+- `operator-gesture-v15.png`：4×2，左右各4帧抬手、伸手、指车、收手。完整提示词：[operator-gesture-v15-prompt.md](operator-gesture-v15-prompt.md)。
+- 按实际角色边界裁片，固定脚底锚点；单帧只绘制一个 alpha=1 的人物，不使用透明交叉淡化。v14 图集仅保留受惊姿势，v13 图集继续用于逃跑。
