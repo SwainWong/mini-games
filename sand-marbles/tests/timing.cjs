@@ -1,4 +1,4 @@
-// Verified actual-input timing for v14 smooth single-operator carts.
+// Verified player input timing; v16 pursuit reopens sand on a different schedule.
 module.exports={
   "1": {
     "1": {
@@ -192,7 +192,7 @@ module.exports={
       "stars": 3
     },
     "1000": {
-      "delay": 0.75,
+      "delay": 1,
       "ticks": 2
     },
     "100000": {

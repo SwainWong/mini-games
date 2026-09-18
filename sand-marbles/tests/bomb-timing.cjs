@@ -53,7 +53,7 @@ module.exports={
     "ticks": 2
   },
   "11-ignite-300": {
-    "delay": 1,
+    "delay": 0,
     "ticks": 2
   },
   "11-ignite-1000": {
