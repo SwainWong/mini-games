@@ -128,3 +128,10 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 - `operator-steering-v15.png`：3×3，9帧左转到回正再到右转。完整提示词：[operator-steering-v15-prompt.md](operator-steering-v15-prompt.md)。
 - `operator-gesture-v15.png`：4×2，左右各4帧抬手、伸手、指车、收手。完整提示词：[operator-gesture-v15-prompt.md](operator-gesture-v15-prompt.md)。
 - 按实际角色边界裁片，固定脚底锚点；单帧只绘制一个 alpha=1 的人物，不使用透明交叉淡化。v14 图集仅保留受惊姿势，v13 图集继续用于逃跑。
+
+## v17 操作员独立人物层
+
+- `operator-complete-v17.png`：image_gen 生成的 6×4、24 帧完整母版；保留为素材来源，不在游戏加载。
+- `operator-actor-v17.png`：image_gen 从母版移除控制台和方向盘得到的 RGBA 人物层；游戏使用这一图集。对应两个 `*-prompt.md` 保留完整提示词。
+- 固定控制台继续使用 `control-props-v14.png`，独立绘制。人物按脚底锚点对齐，每次只画一帧；转向经过中间帧，指车包含抬手、伸手、停留、收手、重新握持。
+- 第 11 帧是备用中立帧；运行序列使用其余 23 帧。没有半透明动作混合。
