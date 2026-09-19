@@ -2,11 +2,11 @@
 const{test}=require('node:test'),a=require('node:assert/strict'),{World}=require('../core.js'),levels=require('../levels.js'),solutions=require('./solutions.cjs'),replay=require('./input-replay.cjs');
 const cases=[
  {id:6,seed:3,kinds:['bomb']},{id:6,seed:8,kinds:['coins20']},
- {id:7,seed:3,kinds:['bomb'],delay:.5},{id:7,seed:8,kinds:['coins20']},
+ {id:7,seed:3,kinds:['bomb'],delay:.25,order:[1,0]},{id:7,seed:8,kinds:['coins20']},
  {id:9,seed:40,kinds:['bomb','bomb']},
- {id:10,seed:3,kinds:['bomb'],outlets:[136,136,400,400]},
+ {id:10,seed:3,kinds:['bomb'],order:[0,2,1,3]},
  {id:10,seed:8,kinds:['coins20'],outlets:[136,136,480,480],recoveryOrder:[3,2,0,1],skipSettledColors:true},
- ...[[34,['coins20','coins20']],[38,['coins20','bomb']],[40,['bomb','bomb']],[85,['bomb','coins20']]].map(([seed,kinds])=>({id:11,seed,kinds})),
+ ...[[34,['coins20','coins20']],[38,['coins20','bomb']],[40,['bomb','bomb']],[85,['bomb','coins20']]].map(([seed,kinds])=>({id:11,seed,kinds,...(seed===40?{outlets:[104,285,470]}:{})})),
  {id:13,seed:3,kinds:['bomb']},
  {id:14,seed:34,kinds:['coins20','coins20'],order:[0,1,4,2,3]},{id:14,seed:40,kinds:['bomb','bomb']},
  {id:14,seed:38,kinds:['coins20','bomb'],order:[0,1,4,2,3],skipSettledColors:true},

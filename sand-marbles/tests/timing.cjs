@@ -187,20 +187,32 @@ module.exports={
       "delay": 0,
       "ticks": 2,
       "score": 130,
-      "stars": 3
+      "stars": 3,
+      "order": [
+        0,
+        2,
+        1,
+        3
+      ]
     },
     "300": {
       "delay": 0,
       "ticks": 2,
       "score": 130,
-      "stars": 3
+      "stars": 3,
+      "order": [
+        0,
+        2,
+        1,
+        3
+      ]
     },
     "1000": {
-      "delay": 1,
+      "delay": 0,
       "ticks": 2
     },
     "100000": {
-      "delay": 1,
+      "delay": 0,
       "ticks": 2,
       "score": 130,
       "stars": 3

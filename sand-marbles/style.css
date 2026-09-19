@@ -44,3 +44,8 @@ body{background:radial-gradient(ellipse at top,#e6c591,#8d6243 120%)}.masthead{h
 .guide-scoring{display:grid;gap:4px;margin-top:10px;padding-top:9px;border-top:1px solid #e9d5a9;font-size:13px;line-height:1.5}
 .guide-scoring strong{color:#246f55}.guide-scoring span{color:#805733}
 @media(max-width:500px){.color-guide{padding:9px}.color-guide h3{font-size:17px}.color-guide img{max-width:280px}}
+
+.codex-content .codex-tip{color:#6e7750;font-size:13px;margin-top:6px}
+.codex-dialog[data-first="true"] .codex-content article{padding:15px 12px}
+.codex-dialog[data-first="true"] .codex-art{width:88px;height:70px}
+.codex-dialog[data-first="true"] .codex-content h3{font-size:17px;margin-bottom:8px}
