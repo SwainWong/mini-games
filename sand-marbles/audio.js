@@ -44,7 +44,6 @@
       else if(event==='treasure'){[660,880,1320].forEach((f,i)=>this.voice(f,.2,.04,i*.06));}
       else if(event==='ignite')this.noise(.35,4200,.022);
       else if(event==='magic-warning'){this.voice(440,.1,.025);this.voice(660,.13,.025,.13);}
-      else if(event==='magic-refilled')this.noise(.35,900,.025);
       else if(event==='blast'||event==='magic-blast'||event==='cart-broken'){this.noise(.4,450,.08);this.voice(65,.3,.06,0,'triangle');}
       else if(event==='stun'){this.voice(450,.18,.035);this.voice(620,.22,.025,.12);}
       else if(event==='loss')this.voice(180,.08,.016);

@@ -9,11 +9,11 @@
   const soil=document.createElement('canvas'),texture=document.createElement('canvas'),earth=document.createElement('canvas');soil.width=texture.width=earth.width=W;soil.height=texture.height=SOIL_BOTTOM;earth.height=H;
   const wall=document.createElement('canvas');wall.width=W;wall.height=SOIL_BOTTOM+12;const wc=wall.getContext('2d');let wallRevision=-1;
   const sc=soil.getContext('2d'),tc=texture.getContext('2d'),ec=earth.getContext('2d'),sound=new SandAudio(),best=new Map(),bestSand=new Map(),bestScores=new Map();
-  const assetSources={lift:'rival-lift-v18',turn:'rival-turn-v18',drill:'rival-drill-v18',pickup:'rival-pickup-v18',reactions:'rival-reactions-v18',aim:'rival-drill-aim-v18',rest:'rival-rest-v16',console:'console-layers-v16',magic:'magic-kit-v16',props:'props-v7',cart:'cart-v8',loot:'mining-props-v10',motion:'rival-motion-v12',bomb:'bomb-kit-v12',operator:'operator-v13',blast:'blast-v13',controls:'control-props-v14',operatorComplete:'operator-actor-v17'};
+  const assetSources={parkedDrill:'drill-parked-v19',lift:'rival-lift-v18',turn:'rival-turn-v18',drill:'rival-drill-v19',pickup:'rival-pickup-v18',reactions:'rival-reactions-v18',aim:'rival-drill-aim-v19',rest:'rival-rest-v16',console:'console-layers-v16',magic:'magic-kit-v16',props:'props-v7',cart:'cart-v8',loot:'mining-props-v10',motion:'rival-motion-v12',bomb:'bomb-kit-v12',operator:'operator-v13',blast:'blast-v13',controls:'control-props-v14',operatorComplete:'operator-actor-v17'};
   const art=Object.fromEntries(Object.keys(assetSources).map(name=>[name,new Image()]));let assetsReady=false;
   const assetLoad=Promise.all(Object.entries(art).map(([name,img])=>new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('角色素材加载失败，请重试'));img.src=`assets/${assetSources[name]}.png`;})));
   const sessionSeen=new Set();let pendingIntro=[],floaters=[],bursts=[];
-  let manualPaused=false,resumeCueUntil=0;
+  let manualPaused=false;
   let world,current=0,brush=20,speech='',speechUntil=0,pointer=null,cursor=null,lastTime=0,accumulator=0,particles=[],dust=[],rivalDust=0,wormDust=new Map(),seed=42,lastHud='',finished=false,motionCheck=0,stillFor=0,motionPositions=[];
   function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
   function roundRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
@@ -48,7 +48,7 @@
     }
   }
   function load(index){
-    operatorAnimation.reset();manualPaused=false;resumeCueUntil=0;$('#pause').textContent='Ⅱ 看图暂停';$('#pause').setAttribute('aria-pressed','false');$('#pause-note').hidden=true;$('#resume-cue').hidden=true;
+    operatorAnimation.reset();manualPaused=false;$('#pause').textContent='Ⅱ 看图暂停';$('#pause').setAttribute('aria-pressed','false');$('#pause-note').hidden=true;
     releasePointer();current=index;if(!roundSeeds.has(index))roundSeeds.set(index,entry.seed??Math.floor(Math.random()*4294967296));world=new World(levels[index],{seed:roundSeeds.get(index)});finished=false;speech='';speechUntil=0;cursor=null;particles=[];floaters=[];bursts=[];dust=[];rivalDust=0;wormDust.clear();accumulator=0;lastHud='';motionCheck=0;stillFor=0;motionPositions=[];
     makeTextures();$('#level-number').textContent=String(index+1).padStart(2,'0');$('#level-title').textContent=levels[index].title;$('#difficulty').textContent=levels[index].difficulty;
     $('#result').hidden=true;$('#result-stars').hidden=true;$('#return-result').hidden=true;$('#rules-budget').textContent=`本关：三星 ≤ ${world.budget.three} 沙量；二星 ≤ ${world.budget.two} 沙量。`;
@@ -61,7 +61,7 @@
     const key=`${world.score}:${world.remainingPotential()}:${world.terrain.units}`;if(key!==lastHud){lastHud=key;$('#collected').textContent=`${world.score} / ${world.targetScore} 分`;$('#target-score').textContent=world.targetScore;$('#current-score').textContent=world.score;$('#remaining-score').textContent=world.remainingPotential();$('#score-meter').max=world.targetScore;$('#score-meter').value=world.score;$('#dug-count').textContent=world.terrain.units;$('#star-budget').textContent=`三星 ≤ ${world.budget.three} · 二星 ≤ ${world.budget.two}`;const meter=$('#sand-meter');meter.max=world.budget.two;meter.low=world.budget.three;meter.high=world.budget.two;meter.optimum=0;meter.value=Math.min(world.terrain.units,world.budget.two);meter.setAttribute('aria-valuetext',`已挖 ${world.terrain.units}，三星额度 ${world.budget.three}，二星额度 ${world.budget.two}`);}
     if(world.started&&world.time-motionCheck>=1){const active=world.balls.filter(b=>b.active),moving=active.some((b,i)=>!motionPositions[i]||Math.hypot(b.x-motionPositions[i][0],b.y-motionPositions[i][1])>2);stillFor=moving||pointer?0:stillFor+world.time-motionCheck;motionPositions=active.map(b=>[b.x,b.y]);motionCheck=world.time;}
     $('#board-wrap').dataset.danger=world.state==='playing'?(world.rival?.danger||'distant'):'distant';
-    $('#board-instruction').textContent=world.magic.pending?(world.magic.snapshot().active?.kind==='refill'?'沙流回填中 · 暂停计时与操作':'小炸弹！快让珠子离开闪光圈'):world.state==='won'?'目标达成！':world.state==='lost'?(world.endCause==='timeout'?'时间到 · 未达过关门槛':'分数机会不足 · 可查看后重来'):world.score>=world.targetScore?'已达标，继续冲分！':!world.balls.some(b=>b.active)&&world.recoverableBag().length?'珠子在盗宝袋里！等漏珠或用爆炸追回。':stillFor>=6&&world.balls.some(b=>b.active)?`还有 ${world.balls.filter(b=>b.active).length} 颗停在沙中 · 可继续挖沙`:world.rival&&!world.rival.escaped&&world.started?(world.rival.danger==='near'?'快！盗宝人就在珠子旁边':world.rival.danger==='approaching'?'小心，他越来越近了！':'盗宝人开挖了，快送珠子回家'):'划开沙土，让珠子落入同色矿车';
+    $('#board-instruction').textContent=world.magic.pending?'小炸弹！快让珠子离开闪光圈':world.state==='won'?'目标达成！':world.state==='lost'?(world.endCause==='timeout'?'时间到 · 未达过关门槛':'分数机会不足 · 可查看后重来'):world.score>=world.targetScore?'已达标，继续冲分！':!world.balls.some(b=>b.active)&&world.recoverableBag().length?'珠子在盗宝袋里！等漏珠或用爆炸追回。':stillFor>=6&&world.balls.some(b=>b.active)?`还有 ${world.balls.filter(b=>b.active).length} 颗停在沙中 · 可继续挖沙`:world.rival&&!world.rival.escaped&&world.started?(world.rival.danger==='near'?'快！盗宝人就在珠子旁边':world.rival.danger==='approaching'?'小心，他越来越近了！':'盗宝人开挖了，快送珠子回家'):'划开沙土，让珠子落入同色矿车';
     const line=$('#board-instruction').textContent;if((!speech||world.time>=speechUntil||world.magic.pending||world.state!=='playing')&&speech!==line){speech=line;speechUntil=world.time+1.2;$('#status').textContent=line;}
   }
   function finish(){
@@ -189,7 +189,7 @@
     }
     if(r.pickup||restFrame!==null||r.phase==='listen'||r.phase==='stun'||r.bag.length>=6&&r.phase==='running'){
       // Independent parked drill; never draw another body or a fabricated arm over a complete pose.
-      const p=SandRivalAnimation.reactions[11];ctx.save();ctx.translate(r.x+dir*27,r.y+21);ctx.scale(dir,1);ctx.drawImage(art.reactions,...p.source,-10,-34,28,34);ctx.restore();
+      ctx.save();ctx.translate(r.x+dir*27,r.y+21);ctx.scale(dir,1);ctx.drawImage(art.parkedDrill,300,50,660,1160,-14,-42,25,44);ctx.restore();
     }
     if(r.pickup?.ball.held){const b=r.pickup.ball;marble(ctx,b.x,b.y,b.r,b.color);drawMaterial(b);}
     if(r.phase==='listen'){ctx.fillStyle='#ffe79e';ctx.font='bold 20px sans-serif';ctx.fillText('!',r.x+26,r.y-28);}
@@ -198,7 +198,6 @@
   function magicDraw(){
     const e=world.magic.snapshot().active;if(!e||!assetsReady)return;ctx.save();
     if(e.kind==='bomb'&&e.age<.9){atlasSprite(art.magic,3,2,1,e.x,e.y+7,45,45);const rise=Math.min(1,e.age/.22)*20;ctx.globalAlpha=.78+.22*Math.sin(e.age*40);atlasSprite(art.magic,3,2,2,e.x,e.y-rise,48,48);ctx.globalAlpha=1;ctx.strokeStyle='#ffda7e';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);ctx.stroke();}
-    if(e.kind==='refill'){atlasSprite(art.magic,3,2,3,e.x,e.y,70,90);if(e.age>=.35){const y=e.progress*SOIL_BOTTOM;for(let x=8;x<W;x+=22){const offset=Math.sin(x*.21+e.age*37);ctx.fillStyle=x%3?'#ffe2a6':'#d99751';ctx.fillRect(x,y-6+offset*7,2,6+offset*3);}for(let x=40;x<W;x+=90){ctx.globalAlpha=e.age<1.55?.55:Math.max(0,(1.8-e.age)/.25)*.55;atlasSprite(art.magic,3,2,5,x,y,130,65);}}}
     ctx.restore();
   }
   function speechDraw(){
@@ -206,7 +205,7 @@
     el.querySelector('span').textContent=speech;el.hidden=!speech;el.dataset.present=String(!!o&&!['flee','gone'].includes(o.phase));
   }
   function treasureHistory(){
-    const labels={coins20:'金币 +20',coins40:'金币 +40',bomb:'小炸弹已触发',refill:'回填已触发'};
+    const labels={coins20:'金币 +20',coins40:'金币 +40',bomb:'小炸弹已触发'};
     const opened=world.treasures.filter(t=>t.opened);
     return opened.length?'已开宝物：'+opened.map(t=>t.kind==='chest'?'宝箱 +'+t.points:`问号袋${t.id+1}·${labels[t.outcome]}`).join('；'):'本局未打开宝物。';
   }
@@ -243,12 +242,12 @@
     if(particles.length>650)particles.splice(0,particles.length-650);if(dust.length>70)dust.splice(0,dust.length-70);
   }
   function drainEvents(){
-    for(const e of world.events){if(e.type==='magic-warning'&&e.kind==='refill')releasePointer();if(e.type==='magic-refilled'&&!world.inputLocked){releasePointer();resumeCueUntil=performance.now()+3200;status('沙流停止！游戏继续，松开后重新划线。');}if(e.type==='magic-blast'){bursts.push({...e,type:'blast',life:1});spray(e.x,e.y,0,-1,18);}if(e.type==='magic-open')status(e.kind==='bomb'?'袋子里是小炸弹！':'沙流魔法！坑道即将回填，计时暂停。');if(['operator-flee','operator-return','bag-dropped','rival-escaped'].includes(e.type))status({'operator-flee':'操作员逃岗了！矿车停止，仍可接珠。','operator-return':'操作员缓过神来，矿车恢复移动。','bag-dropped':'盗宝人丢下袋子了，快追回珠子！','rival-escaped':'盗宝人逃出矿场了。'}[e.type]);if(e.type==='cart-bump')spray(e.x,e.y,0,-1,4);if(e.type==='spill'||e.type==='bag-torn')floaters.push({x:e.x,y:e.y,life:1.3,text:e.type==='spill'?'掉出来了！':'袋子破了！',color:'#ffe6a0'});sound.play(e.type,e.count||e.speed||0);if(['collect','treasure','loss'].includes(e.type))floaters.push({x:e.x,y:e.y,life:1.4,text:e.type==='collect'?`+${e.points??10}`:e.type==='treasure'?`+${e.points}`:(e.outcome==='stolen'?'被偷':e.outcome==='wrong-color'?'错色':'漏接')+' +0',color:e.type==='loss'?'#fff0d4':'#ffec87'});if(e.type==='loss')status('这颗 +0，已得分不扣。剩余珠子和宝物仍可争取。');if(['blast','puff','stun','cart-broken'].includes(e.type)){bursts.push({...e,radius:e.radius||25,life:1});spray(e.x,e.y,0,-1,14);}if(e.type==='collect')for(let i=0;i<6;i++)particles.push({x:e.x,y:e.y,vx:(random()-.5)*80,vy:-random()*80,life:.6,color:colors[e.color].mid,size:2});}
+    for(const e of world.events){if(e.type==='magic-blast'){bursts.push({...e,type:'blast',life:1});spray(e.x,e.y,0,-1,18);}if(e.type==='magic-open')status('袋子里是小炸弹！');if(['operator-flee','operator-return','bag-dropped','rival-escaped'].includes(e.type))status({'operator-flee':'操作员逃岗了！矿车停止，仍可接珠。','operator-return':'操作员缓过神来，矿车恢复移动。','bag-dropped':'盗宝人丢下袋子了，快追回珠子！','rival-escaped':'盗宝人逃出矿场了。'}[e.type]);if(e.type==='cart-bump')spray(e.x,e.y,0,-1,4);if(e.type==='spill'||e.type==='bag-torn')floaters.push({x:e.x,y:e.y,life:1.3,text:e.type==='spill'?'掉出来了！':'袋子破了！',color:'#ffe6a0'});sound.play(e.type,e.count||e.speed||0);if(['collect','treasure','loss'].includes(e.type))floaters.push({x:e.x,y:e.y,life:1.4,text:e.type==='collect'?`+${e.points??10}`:e.type==='treasure'?`+${e.points}`:(e.outcome==='stolen'?'被偷':e.outcome==='wrong-color'?'错色':'漏接')+' +0',color:e.type==='loss'?'#fff0d4':'#ffec87'});if(e.type==='loss')status('这颗 +0，已得分不扣。剩余珠子和宝物仍可争取。');if(['blast','puff','stun','cart-broken'].includes(e.type)){bursts.push({...e,radius:e.radius||25,life:1});spray(e.x,e.y,0,-1,14);}if(e.type==='collect')for(let i=0;i<6;i++)particles.push({x:e.x,y:e.y,vx:(random()-.5)*80,vy:-random()*80,life:.6,color:colors[e.color].mid,size:2});}
     world.events.length=0;
     if(world.rival&&world.rival.removed>rivalDust+6){const r=world.rival,tip=r.lastDigPoint||r.toolPoint();spray(tip.x,tip.y,-r.fx,-r.fy,5);rivalDust=r.removed;}
     for(const w of world.worms)if((w.dug||0)>(wormDust.get(w)||0)+10){spray(w.x,w.y,-w.vx/w.speed,-w.vy/w.speed,3);wormDust.set(w,w.dug);}if(world.started&&world.rival&&world.state==='playing'){if(world.rival.danger==='near')sound.play('danger');}if(world.started&&levels[current].mechanics.worms)sound.play('worm');if(world.state!=='playing')finish();
   }
-  function frame(time){$('#resume-cue').hidden=performance.now()>=resumeCueUntil||manualPaused||world.inputLocked;$('#resume-cue').textContent='沙流停止 · 游戏继续｜重新按住划线';const delta=Math.min((time-lastTime)/1000||0,.05);lastTime=time;const paused=isPaused();
+  function frame(time){const delta=Math.min((time-lastTime)/1000||0,.05);lastTime=time;const paused=isPaused();
     if(!paused){if(world.state==='playing'){accumulator+=delta;while(accumulator>=STEP&&world.state==='playing'){world.step(STEP);accumulator-=STEP;}drainEvents();}const fxDelta=delta;for(const p of particles){const ny=p.y+p.vy*fxDelta;if(p.soil&&p.vy>0&&world.terrain.solid(p.x,ny)&&!world.terrain.solid(p.x,p.y)){p.vy*=-.2;p.vx*=.45;p.life=Math.min(p.life,.18);}else p.y=ny;p.x+=p.vx*fxDelta;p.vy+=330*fxDelta;p.angle=(p.angle||0)+(p.spin||0)*fxDelta;p.life-=fxDelta;}particles=particles.filter(p=>p.life>0);for(const p of dust){p.x+=p.vx*fxDelta;p.y+=p.vy*fxDelta;p.size+=14*fxDelta;p.life-=fxDelta;}dust=dust.filter(p=>p.life>0);for(const f of floaters){f.y-=22*fxDelta;f.life-=fxDelta;}floaters=floaters.filter(f=>f.life>0);for(const b of bursts)b.life-=fxDelta/(b.type==='blast'?1.2:.66);bursts=bursts.filter(b=>b.life>0);updateHud();render();}else accumulator=0;sound.setDrilling(!paused&&world.state==='playing'&&!world.magic.pausesWorld&&world.rival?.digContact);requestAnimationFrame(frame);
   }
   function isPaused(){return manualPaused||!assetsReady||document.hidden||$('#level-dialog').open||$('#rules-dialog').open||$('#potential-dialog').open;}

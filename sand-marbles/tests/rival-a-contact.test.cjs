@@ -27,3 +27,12 @@ test('stone-bottom and board-top/bottom contacts have a complete legal pose rath
   const s=scene(bead(280,by),rocks);Object.assign(s.r,{x,y});const p=s.r.contactStance(s.w.balls[0]);a.ok(p,JSON.stringify({by}));a.ok(s.r.clear(p.x,p.y));
  }
 });
+test('enlarged drill artwork meets the unchanged physical tip in every pose and facing',()=>{
+ for(const p of [...A.drill,...A.aim])for(const fx of [-1,1]){
+  const r={x:280,y:250,fx},d=A.drawing(r,p),tip=A.point(r,p,'tip');
+  const visible={x:r.x+d.dir*(d.x+(p.artTip[0]-d.source[0])*p.scale),y:r.y+d.y+(p.artTip[1]-d.source[1])*p.scale};
+  a.ok(Math.hypot(visible.x-tip.x,visible.y-tip.y)<1e-9);
+  a.ok(p.artTip[0]>=d.source[0]&&p.artTip[0]<=d.source[0]+d.source[2]);
+  a.ok(p.artTip[1]>=d.source[1]&&p.artTip[1]<=d.source[1]+d.source[3]);
+ }
+});
