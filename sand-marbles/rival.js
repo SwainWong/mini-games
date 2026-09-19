@@ -74,6 +74,30 @@
     }
     get loadFactor(){return Math.max(.38,1/(1+this.bag.length*.10));}
     refreshObstacles(){this.blocked=Array.from({length:COLS*ROWS},(_,i)=>!this.clear((i%COLS+.5)*SIZE,(Math.floor(i/COLS)+.5)*SIZE));}
+    separateFromRocks(world){
+      // Moving/tilting rocks can cover the actual navigation source between frames.
+      // Move to the nearest local free boundary before A*, including while stunned.
+      if(this.atExit||this.clear(this.x,this.y))return false;
+      const origin={x:this.x,y:this.y},candidates=[];
+      for(const rock of this.rocks){
+        if(rock.broken||!G.contains(rock,this.x,this.y,RADIUS+3))continue;
+        const local=G.local(rock,this.x,this.y),rx=rock.rx+RADIUS+3.25,ry=rock.ry+RADIUS+3.25;
+        const at=t=>G.point(rock,Math.cos(t)*rx,Math.sin(t)*ry);
+        const error=t=>(Math.cos(t)*rx-Math.abs(local.x))**2+(Math.sin(t)*ry-Math.abs(local.y))**2;
+        let lo=0,hi=Math.PI/2;for(let i=0;i<40;i++){const a=lo+(hi-lo)/3,b=hi-(hi-lo)/3;if(error(a)<error(b))hi=b;else lo=a;}
+        const t=(lo+hi)/2;candidates.push(G.point(rock,Math.sign(local.x||1)*Math.cos(t)*rx,Math.sign(local.y||1)*Math.sin(t)*ry));
+        // Nearest projection may be against another rock or the board edge.
+        for(let i=0;i<64;i++)candidates.push(at(i*Math.PI/32));
+      }
+      const legal=candidates.filter(p=>distance(origin,p)<=48&&this.clear(p.x,p.y)&&this.rocks.every(rock=>{
+        if(rock.broken||G.contains(rock,origin.x,origin.y,RADIUS+3))return true;
+        const n=Math.max(1,Math.ceil(distance(origin,p)/2));for(let i=1;i<=n;i++)if(G.contains(rock,origin.x+(p.x-origin.x)*i/n,origin.y+(p.y-origin.y)*i/n,RADIUS+3))return false;
+        return true;
+      }));
+      legal.sort((a,b)=>distance(origin,a)-distance(origin,b));if(!legal.length)return false;
+      this.releaseHeld(world);this.pickup=null;Object.assign(this,legal[0]);this.path=[];this.repath=0;this.noProgress=0;this.recoveries++;
+      this.refreshObstacles();return true;
+    }
     stun(world,seconds=4){this.releaseHeld(world);this.pickup=null;this.stunTime=Math.max(this.stunTime,seconds);this.phase='stun';this.path=[];this.repath=0;this.listenTime=0;this.sprint=0;this.refreshObstacles();if(!this.clear(this.x,this.y)){let best=null,d=Infinity;for(let y=64;y<549;y+=8)for(let x=44;x<519;x+=8)if(this.clear(x,y)){const n=Math.hypot(x-this.x,y-this.y);if(n<d){d=n;best={x,y};}}if(best)Object.assign(this,best);}world.events.push({type:'stun',x:this.x,y:this.y});}
     magicScare(world){if(this.escaped)return;this.releaseHeld(world);this.pickup=null;this.target=null;this.path=[];this.repath=0;this.listenTime=0;this.sprint=0;this.danger='distant';const roll=world.random('rival');this.fleeing=roll>=.5;this.resting=roll<.5;this.magicSit=this.resting;
       if(this.resting){this.restAge=0;this.stamina=Math.min(this.stamina,20);this.phase='rest';}else{this.dropBag=roll<.75;this.fearAge=0;this.phase='scared';}world.events.push({type:'rival-scared',x:this.x,y:this.y});}
@@ -93,6 +117,7 @@
     step(world,dt){
       if(this.escaped)return;
 
+      this.separateFromRocks(world);
       this.digContact=false;this.age+=dt;this.hearingCooldown=Math.max(0,this.hearingCooldown-dt);this.sprint=Math.max(0,this.sprint-dt);
       if(this.stunTime>0){this.stunTime=Math.max(0,this.stunTime-dt);this.phase='stun';return;}
       if(this.fleeing){this.flee(world,dt);return;}
