@@ -35,3 +35,12 @@ body{background:radial-gradient(ellipse at top,#e6c591,#8d6243 120%)}.masthead{h
 .result-card{display:flex;flex-direction:column;overflow:hidden;max-height:95%;padding-bottom:10px}.result-content{overflow:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin}.result-actions{flex-shrink:0;padding-top:6px;background:#fff2d6;border-top:1px solid #e4cea4}.result-actions .primary-button{margin-top:0}.result-card .result-actions button{min-height:44px}.result-actions .text-button{padding:4px 8px;min-height:44px}#result-kicker{display:none}.result-card .result-record{padding:3px;margin:5px 0}.result-card .result-score{margin:3px 0 7px}.result-card .result-symbol{font-size:34px}.result-card .result-stars{margin:0}.result-card h2{margin:5px 0}.result-card #result-description{line-height:1.5}.result-content:focus-visible{outline:2px solid #b58645;outline-offset:-2px}
 
 .result-card .treasure-history{font-size:11px;line-height:1.45;color:#79593d;text-align:left;padding:5px 7px;border-radius:6px;background:#eddcb955}
+
+.color-guide{margin:8px 0 12px;padding:12px;border:2px solid #d6ae68;border-radius:14px;background:#fff9e8;text-align:center}
+.color-guide h3{font-size:19px;color:#634126;margin:0 0 4px}
+.color-guide>p{font-size:13px;line-height:1.5;margin-bottom:8px}
+.color-guide img{display:block;width:100%;max-width:330px;height:auto;aspect-ratio:1;margin:8px auto;border-radius:10px}
+.guide-colors{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;font-size:12px;font-weight:700}
+.guide-scoring{display:grid;gap:4px;margin-top:10px;padding-top:9px;border-top:1px solid #e9d5a9;font-size:13px;line-height:1.5}
+.guide-scoring strong{color:#246f55}.guide-scoring span{color:#805733}
+@media(max-width:500px){.color-guide{padding:9px}.color-guide h3{font-size:17px}.color-guide img{max-width:280px}}
