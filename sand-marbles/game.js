@@ -203,7 +203,7 @@
   }
   function speechDraw(){
     const el=$('#operator-speech'),o=world.operator;
-    el.textContent=speech;el.hidden=!speech;el.dataset.present=String(!!o&&!['flee','gone'].includes(o.phase));
+    el.querySelector('span').textContent=speech;el.hidden=!speech;el.dataset.present=String(!!o&&!['flee','gone'].includes(o.phase));
   }
   function renderBreakdown(){
     const r=world.roundReport(),box=$('#result-breakdown');box.replaceChildren();
