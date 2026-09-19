@@ -272,7 +272,7 @@ module.exports={
   },
   "13": {
     "1": {
-      "delay": 0,
+      "delay": 0.25,
       "ticks": 2,
       "score": 160,
       "stars": 3

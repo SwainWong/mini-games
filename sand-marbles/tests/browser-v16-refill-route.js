@@ -2,7 +2,7 @@ async page=>{
  const cacheSession=await page.context().newCDPSession(page);await cacheSession.send('Network.setCacheDisabled',{cacheDisabled:true});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewportSize({width:390,height:900});
- await page.goto('http://127.0.0.1:4208/sand-marbles/?level=12&seed=34&build=18',{waitUntil:'domcontentloaded'});
+ await page.goto('http://127.0.0.1:4208/sand-marbles/?level=12&seed=34&build=20',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>sandGame.snapshot().assetsReady);
  const cdp=await page.context().newCDPSession(page),state=()=>page.evaluate(()=>sandGame.snapshot());
  const base=[
@@ -13,7 +13,7 @@ async page=>{
  ];
  const recovery=s=>{
   const paths=[];
-  for(const label of ['blue-high','jade','amber','blue-low']){
+  for(const label of ['jade','blue-high','amber','blue-low']){
    const color=label.split('-')[0],bs=s.balls.filter(b=>!b.held&&b.color===color&&(color!=='blue'||(label==='blue-low'?b.y>=400:b.y<400)));
    if(!bs.length)continue;
    const x=bs.reduce((sum,b)=>sum+b.x,0)/bs.length,y=Math.max(...bs.map(b=>b.y)),home={amber:104,jade:280,blue:456}[color],p=[[x,y]];

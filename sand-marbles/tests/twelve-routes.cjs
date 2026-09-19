@@ -11,7 +11,7 @@ exports.initial = open => [
 exports.order = [3,1,0,2];
 exports.recovery = (world, open) => {
   const paths=[];
-  for (const label of ['blue-high','jade','amber','blue-low']) {
+  for (const label of ['jade','blue-high','amber','blue-low']) {
     const color=label.split('-')[0];
     const balls=world.balls.filter(b => b.active && !b.held && b.color===color &&
       (color!=='blue' || (label==='blue-low' ? b.y>=400 : b.y<400)));

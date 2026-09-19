@@ -12,4 +12,4 @@
 
 [D机制图](mechanics-d.png)为装载与魔法事件示意：车内宝珠/岩石占位、固定控制台及人物气泡、炸弹与废珠、全坑回填。最终游戏以设计文档规定的碰撞、概率和结算为准。
 
-角色提示词在 [prompts.md](prompts.md)，机制图提示词在 [mechanics-prompt.md](mechanics-prompt.md)。用户选择确认之前不替换线上素材。
+角色提示词在 [prompts.md](prompts.md)，机制图提示词在 [mechanics-prompt.md](mechanics-prompt.md)。用户已于2026-09-19选择 A；据此制作独立透明动作素材并接入，发布仍需完整回归和三位玩家验收。

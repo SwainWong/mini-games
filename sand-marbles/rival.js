@@ -1,11 +1,12 @@
 /* A visible pursuer. Sand is diggable; rocks are never passable. No time-based loss. */
 (function(root,factory){const Rival=factory();if(typeof module==='object')module.exports=Rival;else root.SandRival=Rival;})(globalThis,()=>{
+  const A=typeof module==='object'?require('./rival-animation.js'):globalThis.SandRivalAnimation;
   const G=typeof module==='object'?require('./rock-geometry.js'):globalThis.SandRock;
   const SIZE=16,COLS=35,ROWS=35,RADIUS=10;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   class Rival{
     constructor(level,balls){
-      this.targetCooldown=new WeakMap();this.noProgress=0;this.recoveries=0;this.patrolPoint=null;this.fleeing=false;this.escaped=false;this.fearAge=0;this.dropBag=false;this.bag=[];this.torn=false;this.movingSeconds=0;this.spillSeconds=0;this.pickup=null;this.digCycle=0;this.rocks=level.rocks;this.stamina=100;this.resting=false;this.restAge=0;this.stunTime=0;this.hearingCooldown=0;this.listenTime=0;this.sprint=0;this.bagTime=0;this.speed=level.mechanics.rival.speed;this.age=0;this.phase='watching';this.danger='distant';this.distance=null;this.target=null;this.path=[];this.repath=0;this.fx=1;this.fy=0;this.removed=0;this.captured=null;
+      this.targetCooldown=new WeakMap();this.noProgress=0;this.recoveries=0;this.patrolPoint=null;this.fleeing=false;this.escaped=false;this.fearAge=0;this.dropBag=false;this.bag=[];this.torn=false;this.movingSeconds=0;this.spillSeconds=0;this.pickup=null;this.digContact=false;this.digCycle=0;this.rocks=level.rocks;this.stamina=100;this.resting=false;this.restAge=0;this.stunTime=0;this.hearingCooldown=0;this.listenTime=0;this.sprint=0;this.bagTime=0;this.speed=level.mechanics.rival.speed;this.age=0;this.phase='watching';this.danger='distant';this.distance=null;this.target=null;this.path=[];this.repath=0;this.fx=1;this.fy=0;this.removed=0;this.captured=null;
       const starts=[{x:48,y:76},{x:512,y:76}].filter(p=>this.clear(p.x,p.y));
       const initial=balls.filter(b=>b.active);starts.sort((a,b)=>Math.min(...initial.map(p=>distance(b,p)))-Math.min(...initial.map(p=>distance(a,p))));
       const start=starts[0]||{x:28,y:76};this.x=start.x;this.y=start.y;this.fx=start.x>280?-1:1;
@@ -16,6 +17,24 @@
     canReach(from,ball){
       if(distance(from,ball)>=ball.r+18)return false;
       const n=Math.max(1,Math.ceil(distance(from,ball)/3));for(let i=1;i<=n;i++){const x=from.x+(ball.x-from.x)*i/n,y=from.y+(ball.y-from.y)*i/n;if(this.rocks.filter(r=>!r.broken).some(r=>G.contains(r,x,y)))return false;}return true;
+    }
+    contactStance(ball){
+      const choices=[];
+      for(const contactFrame of A.contactFrames)for(const dir of [this.fx<0?-1:1,this.fx<0?1:-1]){
+        const palm=A.local(A.pickup[contactFrame]),p={x:ball.x-dir*palm.x,y:ball.y-palm.y,dir,contactFrame};
+        if(!this.clear(p.x,p.y)||!this.lineClear(this,p)||!this.canReach(p,ball))continue;
+        // A reachable stance is insufficient if the real bead cannot travel along the complete hand sequence.
+        const actor={...p,fx:dir},points=[{x:ball.x,y:ball.y},...A.carryFrames(contactFrame).map(f=>A.point(actor,A.pickup[f]))];
+        let blocked=false;for(let i=1;i<points.length&&!blocked;i++){const from=points[i-1],to=points[i],n=Math.max(1,Math.ceil(distance(from,to)/2));for(let k=0;k<=n;k++)if(this.rocks.some(r=>!r.broken&&G.contains(r,from.x+(to.x-from.x)*k/n,from.y+(to.y-from.y)*k/n,ball.r))){blocked=true;break;}}
+        if(!blocked)choices.push(p);
+      }
+      choices.sort((a,b)=>distance(this,a)-distance(this,b));return choices[0]||null;
+    }
+    alignPickup(world,ball,stance,dt){
+      const d=distance(this,stance),speed=Math.min(80,this.speed*1.65*(.8+.3*this.stamina/100)*this.loadFactor),amount=Math.min(d,speed*dt);
+      this.phase='running';this.fx=stance.dir;this.fy=0;
+      if(d>.6){if(amount>0){this.x+=(stance.x-this.x)/d*amount;this.y+=(stance.y-this.y)/d*amount;this.stamina=Math.max(0,this.stamina-dt*6*(1+this.bag.length*.06));this.moveBag(world,dt,amount);}return false;}
+      this.pickup={ball,age:0,start:{x:ball.x,y:ball.y},contactFrame:stance.contactFrame};this.phase='reach';return true;
     }
     route(target){
       const end={x:Math.max(42,Math.min(518,target.x)),y:Math.max(58,Math.min(548,target.y))};
@@ -67,14 +86,14 @@
       if(!this.exitPoint||this.repath<=0){this.refreshObstacles();const exits=[];for(const x of [44,516])for(let y=72;y<=536;y+=32){if(!this.clear(x,y))continue;const path=this.route({x,y});if(!path.length)continue;let length=0,last=this;for(const p of path){length+=distance(last,p);last=p;}exits.push({x,y,path,length});}exits.sort((a,b)=>a.length-b.length);const chosen=exits[0];if(chosen){this.exitPoint={x:chosen.x,y:chosen.y};this.path=chosen.path;}this.repath=.7;}
       const old={x:this.x,y:this.y};let next=this.path[0];while(next&&distance(this,next)<1){this.path.shift();next=this.path[0];}
       if(this.exitPoint&&distance(this,this.exitPoint)<3){this.atExit=true;this.exitSide=this.exitPoint.x<280?-1:1;}
-      if(this.atExit){this.fx=this.exitSide;this.fy=0;this.x+=this.exitSide*110*this.loadFactor*dt;this.removed+=world.terrain.dig(this.x+this.exitSide*18,this.y,23,'rival');if(this.x<-45||this.x>605){this.escaped=true;this.phase='escaped';this.bag.length=0;world.events.push({type:'rival-escaped',x:this.x,y:this.y});}}
-      else if(next){const d=distance(this,next),speed=110*this.loadFactor,amount=Math.min(d,speed*dt),dx=(next.x-this.x)/d,dy=(next.y-this.y)/d;this.fx=dx;this.fy=dy;this.fleeDigging=world.terrain.solid(this.x+dx*26,this.y+dy*26);this.digCycle=(this.digCycle+dt*3)%1;if(this.clear(this.x+dx*amount,this.y+dy*amount)){this.x+=dx*amount;this.y+=dy*amount;this.removed+=world.terrain.dig(this.x+dx*20,this.y+dy*20,24,'rival');}else this.repath=0;if(distance(old,this)>.001)this.stamina=Math.max(0,this.stamina-dt*12*(1+this.bag.length*.06));}
+      if(this.atExit){this.fx=this.exitSide;this.fy=0;this.x+=this.exitSide*110*this.loadFactor*dt;const tip=this.toolPoint(),dug=world.terrain.dig(tip.x,tip.y,20,'rival');this.removed+=dug;this.digContact=dug>0;if(dug)this.lastDigPoint={...tip};if(this.x<-45||this.x>605){this.escaped=true;this.phase='escaped';this.bag.length=0;world.events.push({type:'rival-escaped',x:this.x,y:this.y});}}
+      else if(next){const d=distance(this,next),speed=110*this.loadFactor,amount=Math.min(d,speed*dt),dx=(next.x-this.x)/d,dy=(next.y-this.y)/d;this.fx=dx;this.fy=dy;this.fleeDigging=world.terrain.solid(this.x+dx*26,this.y+dy*26);this.digCycle=(this.digCycle+dt*3)%1;if(this.clear(this.x+dx*amount,this.y+dy*amount)){this.x+=dx*amount;this.y+=dy*amount;const tip=this.toolPoint(),dug=world.terrain.dig(tip.x,tip.y,20,'rival');this.removed+=dug;this.digContact=dug>0;if(dug)this.lastDigPoint={...tip};}else this.repath=0;if(distance(old,this)>.001)this.stamina=Math.max(0,this.stamina-dt*12*(1+this.bag.length*.06));}
       if(!this.escaped)this.moveBag(world,dt,distance(old,this));
     }
     step(world,dt){
       if(this.escaped)return;
 
-      this.age+=dt;this.hearingCooldown=Math.max(0,this.hearingCooldown-dt);this.sprint=Math.max(0,this.sprint-dt);
+      this.digContact=false;this.age+=dt;this.hearingCooldown=Math.max(0,this.hearingCooldown-dt);this.sprint=Math.max(0,this.sprint-dt);
       if(this.stunTime>0){this.stunTime=Math.max(0,this.stunTime-dt);this.phase='stun';return;}
       if(this.fleeing){this.flee(world,dt);return;}
       if(this.pickup){this.stepPickup(world,dt);return;}
@@ -85,7 +104,7 @@
       const candidates=world.balls.filter(b=>b.active&&!b.held&&b.y<560&&(b.theftImmuneUntil??0)<=(world.time??this.age));
       if(!candidates.length){this.danger='distant';this.distance=null;if(this.bag.length&&(this.torn||this.bag.length>6)){this.patrolGoal??={x:this.x<280?480:80,y:110,r:8,active:true,patrol:true,vx:0,vy:0};if(distance(this,this.patrolGoal)<30)this.patrolGoal.x=this.patrolGoal.x>280?80:480;candidates.push(this.patrolGoal);}else{this.phase='searching';this.target=null;return;}}
       const available=candidates.filter(b=>(this.targetCooldown.get(b)??0)<=this.age);
-      const close=available.find(b=>!b.patrol&&this.canReach(this,b));if(close){this.pickup={ball:close,age:0,start:{x:close.x,y:close.y}};this.phase='reach';this.fx=close.x<this.x?-1:1;return;}
+      const close=available.find(b=>!b.patrol&&this.canReach(this,b));if(close){const stance=this.contactStance(close);if(stance){const previous={x:this.x,y:this.y};this.alignPickup(world,close,stance,dt);this.watchProgress(previous,dt);return;}this.avoidTarget(close,.5);}
       const previous={x:this.x,y:this.y};this.repath-=dt;if(this.repath<=0||(this.target&&(!this.target.active||this.target.y>=560))){
         this.refreshObstacles();const calm=available.filter(b=>Math.hypot(b.vx,b.vy)<70),choices=calm.length?calm:available;
         choices.sort((a,b)=>distance(this,a)-distance(this,b));this.target=null;this.path=[];
@@ -96,8 +115,8 @@
         const digging=world.terrain.solid(this.x+dx*34,this.y+dy*34);this.phase=digging?'digging':'running';
         const load=1+this.bag.length*.06,energy=(.8+.3*this.stamina/100)*this.loadFactor;this.digCycle=(this.digCycle+dt*(1.8*energy))%1;const amount=Math.min(d,this.speed*(digging?1:1.65)*energy*(this.sprint>0?1.5:1)*(.75+Math.max(0,Math.sin(this.age*13))*.5)*dt);
         const nx=this.x+dx*amount,ny=this.y+dy*amount;if(this.clear(nx,ny)){this.x=nx;this.y=ny;}else this.repath=0;
-        const tip=this.toolPoint();let excavated=0;if(amount>0&&(!digging||(this.digCycle>=.42&&this.digCycle<.84)))excavated=world.terrain.dig(tip.x,tip.y,20,'rival');this.removed+=excavated;
-        if(distance(this,previous)>.001||excavated>0)this.stamina=Math.max(0,this.stamina-((digging?10:6)+(this.sprint>0?8:0))*load*dt);
+        const tip=this.toolPoint();let excavated=0;if(amount>0)excavated=world.terrain.dig(tip.x,tip.y,20,'rival');this.digContact=excavated>0;if(excavated)this.lastDigPoint={...tip};this.removed+=excavated;
+        if(distance(this,previous)>.001||excavated>0)this.stamina=Math.max(0,this.stamina-((excavated>0?10:6)+(this.sprint>0?8:0))*load*dt);
       }else this.phase='searching';
       this.watchProgress(previous,dt);
       const nearest=candidates.reduce((a,b)=>distance(this,a)<distance(this,b)?a:b);this.distance=nearest.patrol?null:distance(this,nearest);
@@ -105,13 +124,13 @@
       this.moveBag(world,dt,distance(this,previous));
     }
     get bagScale(){return 1+Math.min(1.15,this.bag.length*.085);}
-    bagPoint(){return{x:this.x-(this.fx<0?-1:1)*27,y:this.y-22};}
-    heldPoint(){const p=this.pickup,dir=this.fx<0?-1:1;if(!p)return this.bagPoint();const chest={x:this.x+dir*3,y:this.y-22};if(p.age<.6){const t=Math.max(0,Math.min(1,(p.age-.28)/.32));return{x:p.start.x+(chest.x-p.start.x)*t,y:p.start.y+(chest.y-p.start.y)*t-7*Math.sin(t*Math.PI)};}const t=Math.min(1,(p.age-.6)/.4),bag=this.bagPoint();return{x:chest.x+(bag.x-chest.x)*t,y:chest.y+(bag.y-chest.y)*t-12*Math.sin(t*Math.PI)};}
+    bagPoint(){return A.bag(this);}
+    heldPoint(){if(!this.pickup)return this.bagPoint();const p=A.palm(this),g=this.pickup.grip||{x:0,y:0},fade=this.pickup.age<.7?1:Math.max(0,(1-this.pickup.age)/.3);return{x:p.x+g.x*fade,y:p.y+g.y*fade};}
     releaseHeld(world){const b=this.pickup?.ball;if(!b?.held)return;b.held=false;b.vx=-(this.fx<0?-1:1)*35;b.vy=15;b.theftImmuneUntil=(world.time??this.age)+1.5;world.terrain.dig(b.x,b.y,b.r+4,'rival');}
     stepPickup(world,dt){const p=this.pickup,b=p.ball;p.age+=dt;
       if(!b.active||(!b.held&&!this.canReach(this,b))){this.releaseHeld(world);this.pickup=null;this.avoidTarget(b,.25);this.phase='searching';return;}
-      this.phase=p.age<.28?'reach':p.age<.6?'lifting':'bagging';
-      if(p.age>=.28&&!b.held){p.start={x:b.x,y:b.y};b.held=true;this.captured={x:b.x,y:b.y,color:b.color};}
+      this.phase=p.age<.24?'reach':p.age<.4?'contact':p.age<.7?'lifting':'bagging';
+      if(p.age>=.24&&!b.held){const palm=A.point(this,A.pickup[p.contactFrame]);if(distance(palm,b)>2){this.pickup=null;this.avoidTarget(b,.15);this.phase='searching';return;}p.start={x:b.x,y:b.y};p.grip={x:b.x-palm.x,y:b.y-palm.y};b.held=true;this.captured={x:b.x,y:b.y,color:b.color};}
       if(b.held){const point=this.heldPoint(),steps=Math.max(1,Math.ceil(distance(b,point)/2));for(let i=1;i<=steps;i++){const x=b.x+(point.x-b.x)*i/steps,y=b.y+(point.y-b.y)*i/steps;if(this.rocks.some(r=>!r.broken&&G.contains(r,x,y,b.r))){this.releaseHeld(world);this.pickup=null;this.phase='searching';this.avoidTarget(b,1.2);return;}}Object.assign(b,point,{vx:0,vy:0});}
       this.stamina=Math.max(0,this.stamina-dt*(4+this.bag.length*.5));
       if(p.age>=1)world.queueInteraction({u:1,kind:'theft',apply:()=>{if(this.pickup!==p||this.stunTime>0||!b.active)return;b.held=false;this.bag.push(b);this.pickup=null;this.repath=0;world.resolveBead(b,'stolen');world.events.push({type:'stow',...this.bagPoint()});}});
@@ -120,8 +139,8 @@
       if(!this.torn&&this.bag.length>6){this.movingSeconds+=dt;while(this.movingSeconds>=1){this.movingSeconds-=1;if(world.random('rival')<.05){this.torn=true;world.events.push({type:'bag-torn',...this.bagPoint()});break;}}}else if(!this.torn)this.movingSeconds=0;
       if(this.torn&&this.bag.length){this.spillSeconds+=dt;while(this.spillSeconds>=.75&&this.bag.length){this.spillSeconds-=.75;const b=this.bag.pop(),p=this.bagPoint();if(!this.clear(p.x,p.y))Object.assign(p,{x:this.x,y:this.y});world.terrain.dig(p.x,p.y,b.r+6,'rival');Object.assign(b,p,{previousX:p.x,previousY:p.y,active:true,held:false,stolen:false,vx:-(this.fx<0?-1:1)*25,vy:35,theftImmuneUntil:(world.time??this.age)+2});world.losses.stolen=Math.max(0,world.losses.stolen-1);world.events.push({type:'spill',...p,color:b.color});}}
     }
-    toolPoint(){const dir=this.fx<0?-1:1,t=this.digCycle;if(this.phase!=='digging'&&!(this.phase==='fleeing'&&this.fleeDigging))return{x:this.x+this.fx*20,y:this.y+this.fy*20};const swing=Math.sin(t*Math.PI*2);return{x:this.x+dir*(24-16*swing),y:this.y+this.fy*12-22*Math.max(0,swing)+7*Math.max(0,-swing)};}
-    snapshot(){return{noProgress:this.noProgress,recoveries:this.recoveries,loadFactor:this.loadFactor,fleeDigging:!!this.fleeDigging,escaped:this.escaped,fleeing:this.fleeing,dropBag:this.dropBag,fearAge:this.fearAge,bagCount:this.bag.length,bagScale:this.bagScale,torn:this.torn,digCycle:this.digCycle,pickup:this.pickup?{age:this.pickup.age,color:this.pickup.ball.color,held:!!this.pickup.ball.held,point:this.heldPoint()}:null,stamina:this.stamina,stunTime:this.stunTime,sprint:this.sprint,resting:this.resting,x:this.x,y:this.y,tool:this.toolPoint(),phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
+    toolPoint(){const p=A.pose(this);return A.point(this,p.tip?p:A.drillPose(this),'tip');}
+    snapshot(){return{noProgress:this.noProgress,recoveries:this.recoveries,loadFactor:this.loadFactor,fleeDigging:!!this.fleeDigging,escaped:this.escaped,fleeing:this.fleeing,dropBag:this.dropBag,fearAge:this.fearAge,bagCount:this.bag.length,bagScale:this.bagScale,torn:this.torn,digCycle:this.digCycle,pickup:this.pickup?{frame:A.pickupFrame(this.pickup),contactFrame:this.pickup.contactFrame,palm:A.palm(this),age:this.pickup.age,color:this.pickup.ball.color,held:!!this.pickup.ball.held,point:this.heldPoint()}:null,stamina:this.stamina,stunTime:this.stunTime,sprint:this.sprint,resting:this.resting,x:this.x,y:this.y,tool:this.toolPoint(),phase:this.phase,danger:this.danger,distance:this.distance,fx:this.fx,fy:this.fy,digContact:this.digContact,removed:this.removed,target:this.target?{x:this.target.x,y:this.target.y,color:this.target.color}:null,captured:this.captured?{...this.captured}:null};}
   }
   return Rival;
 });

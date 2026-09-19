@@ -8,6 +8,13 @@
       if(!AudioContext)throw new Error('这个浏览器暂不支持音效');
       this.context ||= new AudioContext();await this.context.resume();this.enabled=true;this.play('on');return true;
     }
+    setDrilling(active){
+      active=active&&this.enabled&&this.context?.state==='running';
+      if(!active){if(this.drillingVoice){try{this.drillingVoice.stop();}catch(_){}this.drillingVoice=null;}return;}
+      if(this.drillingVoice)return;const c=this.context,o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();
+      o.type='sawtooth';o.frequency.value=92;f.type='lowpass';f.frequency.value=620;g.gain.value=.009;o.connect(f);f.connect(g);g.connect(c.destination);this.drillingVoice=o;this.voices.add(o);
+      o.onended=()=>{this.voices.delete(o);o.disconnect();f.disconnect();g.disconnect();if(this.drillingVoice===o)this.drillingVoice=null;};o.start();this.played++;
+    }
     voice(frequency,duration,volume=.04,delay=0,type='sine'){
       if(!this.enabled||this.context.state!=='running')return;
       const c=this.context,start=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();
@@ -32,7 +39,7 @@
       else if(event==='spill')this.voice(850,.12,.025);
       else if(event==='shuffle')this.noise(.12,700,.025);
       else if(event==='rest'){this.voice(140,.16,.022,0,'triangle');this.voice(115,.22,.018,.17,'triangle');}
-      else if(event==='rival-dig')this.noise(.07,1300,.018);
+      else if(event==='rival-dig'){this.voice(92,.09,.009,0,'sawtooth');this.noise(.07,850,.012);}
       else if(event==='danger'){this.voice(210,.07,.025,0,'triangle');this.voice(240,.07,.02,.13,'triangle');}
       else if(event==='treasure'){[660,880,1320].forEach((f,i)=>this.voice(f,.2,.04,i*.06));}
       else if(event==='ignite')this.noise(.35,4200,.022);
