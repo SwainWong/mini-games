@@ -1,3 +1,4 @@
+// Historical v16 refill-only browser trace; effect removed in v19. Current verification: browser-v16-magic.js.
 // Historical diagnostic for the pre-redesign level-12 map; retained for failure provenance.
 // Current verification is browser-v16-refill-route.js. Do not run these coordinates against the new map.
 // Actual touch with measured world-time checkpoints. Diagnostic, not a winning-route claim.

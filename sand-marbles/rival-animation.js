@@ -7,10 +7,11 @@
   const turnPalms=[[338,251],[774,255],[1270,255],[248,744],[662,748],[1148,777]],turnRoots=[270,754,1267,265,750,1280];
   for(let i=0;i<6;i++)pickup.push({sheet:'lift',source:[i%3*512,i<3?50:477,512,i<3?422:487],root:[liftRoots[i],i<3?466:958],palm:liftPalms[i],scale:68/450});
   for(let i=0;i<6;i++)pickup.push({sheet:'turn',source:[i%3*512,i<3?10:519,512,i<3?504:493],root:[turnRoots[i],i<3?510:1005],palm:turnPalms[i],scale:68/490});
-  const drill=Array.from({length:12},(_,i)=>{const row=Math.floor(i/4),col=i%4,x=col*384,y=[35,355,677][row],feet=[338,666,995][row];return{sheet:'drill',source:[x,y,384,[306,316,322][row]],root:[x+176,feet],tip:[x+([322,704,1103,1487,324,700,1096,1489,346,716,1106,1486][i]-x),i<4?335:i<6?661:i<8?588:911],scale:68/310};});
+  const drill=Array.from({length:12},(_,i)=>{const row=Math.floor(i/4),col=i%4,x=col*384,y=[35,355,677][row],feet=[338,666,995][row];return{sheet:'drill',source:[x,y,384,[310,316,322][row]],root:[x+176,feet],tip:[[322,704,1103,1487,324,700,1096,1489,346,716,1106,1486][i],i<4?335:i<6?661:i<8?588:911],artTip:[[349,729,1129,1508,350,726,1115,1505,366,734,1126,1507][i],i<4?340:i<6?664:i<8?600:931],scale:68/310};});
   const reactions=Array.from({length:12},(_,i)=>{const row=Math.floor(i/4),col=i%4;return{sheet:'reactions',source:[col*384,[20,349,676][row],384,[320,320,335][row]],root:[col*384+210,[335,666,999][row]],scale:68/320};});
+  const artTips=[[392,30],[742,30],[1128,29],[1482,30],[377,365],[727,365],[1140,539],[1519,539],[384,851],[768,851],[1150,851],[1530,851]];
   const tips=[[360,43],[708,30],[1106,40],[1493,30],[360,373],[709,376],[1120,556],[1500,556],[372,860],[760,860],[1137,860],[1513,860]];
-  const aim=Array.from({length:12},(_,i)=>{const row=Math.floor(i/4),col=i%4;return{sheet:'aim',source:[col*384,[20,350,700][row],384,[328,339,305][row]],root:[col*384+176,[343,680,998][row]],tip:tips[i],scale:68/310};});
+  const aim=Array.from({length:12},(_,i)=>{const row=Math.floor(i/4),col=i%4,edges=row===0?[0,400,768,1152,1536]:row===2?[0,392,776,1156,1536]:[0,384,768,1152,1536];return{sheet:'aim',source:[edges[col],[20,350,700][row],edges[col+1]-edges[col],[328,339,305][row]],root:[col*384+176,[343,680,998][row]],tip:tips[i],artTip:artTips[i],scale:68/310};});
   // Running strides reach slightly past nominal cells; tightly bounded source rectangles avoid neighbouring sprites.
   reactions[8].source=[44,676,355,327];reactions[8].root=[225,993];
   reactions[9].source=[476,676,308,327];reactions[9].root=[606,993];
@@ -43,6 +44,7 @@
     return{sheet:'drill',frame:r.phase==='running'?6+Math.floor(r.age*9*r.loadFactor)%6:6};
   }
   function pose(r){const s=selection(r);return{...s,...({pickup,drill,reactions,aim}[s.sheet][s.frame])};}
-  function drawing(r,p=pose(r)){return{source:p.source,x:(p.source[0]-p.root[0])*p.scale,y:(p.source[1]-p.root[1])*p.scale+16,width:p.source[2]*p.scale,height:p.source[3]*p.scale,dir:direction(r)*(p.flip?-1:1)};}
+  // Align the larger artwork tip to the original physical contact, preserving pursuit balance.
+  function drawing(r,p=pose(r)){const dx=p.artTip?p.tip[0]-p.artTip[0]:0,dy=p.artTip?p.tip[1]-p.artTip[1]:0;return{source:p.source,x:(p.source[0]-p.root[0]+dx)*p.scale,y:(p.source[1]-p.root[1]+dy)*p.scale+16,width:p.source[2]*p.scale,height:p.source[3]*p.scale,dir:direction(r)*(p.flip?-1:1)};}
   return{pickup,drill,reactions,aim,contactFrames,local,point,palm,bag,pickupFrame,selection,pose,drawing,drillPose,carryFrames};
 });

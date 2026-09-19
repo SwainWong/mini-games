@@ -1,3 +1,4 @@
+// Historical v16 refill-only browser trace; effect removed in v19. Current verification: browser-v16-magic.js.
 async page=>{
  const cacheSession=await page.context().newCDPSession(page);await cacheSession.send('Network.setCacheDisabled',{cacheDisabled:true});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
