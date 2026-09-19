@@ -75,7 +75,7 @@
     $('#result-description').textContent=won?`${world.endCause==='timeout'?'时间到':'珠子全部结算'}！最终 ${world.score} 分，过关门槛 ${world.targetScore} 分，接到 ${world.collected} 颗珠子。${world.stars<3?'试试更短的路线，少挖一些沙，挑战三星。':'这条精细的沙径，值得三颗星。'}`:world.reason;
     renderBreakdown();
     $('#result-action').innerHTML=won?(last?'回到第一关 <span>↻</span>':'下一关 <span>→</span>'):'重新挑战 <span>↻</span>';
-    $('#result-review').hidden=won;$('#result-review').textContent=world.endCause==='timeout'?'查看本局地图':'查看失误位置';$('#result-record').hidden=!won;$('#result-record').textContent=won?`${oldScore===undefined||world.score>oldScore?'本次新高！':'本次最高：'}${bestScores.get(current)} 分 · 最少 ${bestSand.get(current)} 沙`:'';$('#result-replay').hidden=!won;$('#result-replay').textContent='再玩一次，挑战更高分';$('#result').hidden=false;updateLevelGrid();
+    $('#result-review').hidden=won;$('#result-review').textContent=world.endCause==='timeout'?'查看本局地图':'查看失误位置';$('#result-record').hidden=!won;$('#result-record').textContent=won?`${oldScore===undefined||world.score>oldScore?'本次新高！':'本次最高：'}${bestScores.get(current)} 分 · 最少 ${bestSand.get(current)} 沙`:'';$('#result-replay').hidden=!won;$('#result-replay').textContent='再玩一次，挑战更高分';$('#result').hidden=false;$('.result-content').scrollTop=0;updateLevelGrid();
   }
   function marble(c,x,y,r,color,alpha=1){
     const p=colors[color];c.save();c.globalAlpha=alpha;c.shadowColor='#160d0980';c.shadowBlur=2;c.shadowOffsetY=2;
@@ -205,6 +205,11 @@
     const el=$('#operator-speech'),o=world.operator;
     el.querySelector('span').textContent=speech;el.hidden=!speech;el.dataset.present=String(!!o&&!['flee','gone'].includes(o.phase));
   }
+  function treasureHistory(){
+    const labels={coins20:'金币 +20',coins40:'金币 +40',bomb:'小炸弹已触发',refill:'回填已触发'};
+    const opened=world.treasures.filter(t=>t.opened);
+    return opened.length?'已开宝物：'+opened.map(t=>t.kind==='chest'?'宝箱 +'+t.points:`问号袋${t.id+1}·${labels[t.outcome]}`).join('；'):'本局未打开宝物。';
+  }
   function renderBreakdown(){
     const r=world.roundReport(),box=$('#result-breakdown');box.replaceChildren();
     const table=document.createElement('table');table.className='round-table';
@@ -212,12 +217,12 @@
     for(const c of r.colors){const row=document.createElement('tr');for(const value of [colors[c.color].label,c.collected,c.stolen,c.wrong,c.missed,c.unsettled]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}table.append(row);}
     const total=document.createElement('p');total.className='report-total';total.textContent=`接珠 ${r.beadPoints} + 宝物 ${r.bonusPoints} = ${world.score} 分`;
     const note=document.createElement('small');note.textContent='被盗只计未追回的珠子；剩余包含场内和掉落袋。';
-    box.append(table,total,note);
+    const history=document.createElement('p');history.className='treasure-history';history.textContent=treasureHistory();box.append(table,total,history,note);
   }
   function openPotential(){
     resetInput();const r=world.roundReport(),box=$('#potential-content');box.replaceChildren();
     for(const text of [`场内自由珠 ${r.freeCount} 颗 · 手中未装袋 ${r.heldCount} 颗`,`地上袋内 ${r.droppedCount} 颗 · 盗宝袋可能追回 ${r.recoverableCount} 颗`,`珠子原值 ${r.rawBeadValue} 分 → 按车位限制，上限 ${r.beadPotential} 分`,`未开问号袋 ${r.unopenedBags} 个 · 宝箱 ${r.unopenedChests} 个`,`仍可触发的宝物上限 ${r.treasurePotential} 分（问号袋每个最多40，并非保底）`,`剩余上限 ${r.beadPotential} + ${r.treasurePotential} = ${r.remaining} 分`,`已有 ${world.score} + 剩余上限 ${r.remaining}，对照门槛 ${world.targetScore} 分`]){const p=document.createElement('p');p.textContent=text;box.append(p);}
-    $('#potential-dialog').showModal();
+    const history=document.createElement('p');history.textContent=treasureHistory();box.append(history);$('#potential-dialog').showModal();
   }
   function failureDraw(){
     const f=world.failure;if(!f||!f.color||!Number.isFinite(f.x))return;ctx.save();ctx.strokeStyle='#b73a32';ctx.fillStyle='#fff1da';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,(f.r||9)+5,0,Math.PI*2);ctx.stroke();marble(ctx,f.x,f.y,f.r||9,f.color);drawMaterial({x:f.x,y:f.y,r:f.r||9,type:f.material||'glass'});if(f.targetX!==undefined){roundRect(ctx,f.targetX-CART_MOUTH.halfWidth,f.targetY-CART_MOUTH.halfHeight,CART_MOUTH.halfWidth*2,CART_MOUTH.halfHeight*2,5);ctx.stroke();}const x=Math.max(76,Math.min(W-76,f.x));ctx.fillStyle='#9e342e';roundRect(ctx,x-72,518,144,34,7);ctx.fill();ctx.fillStyle='#fff9ee';ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(f.kind==='stolen'?'被盗宝人抢走了！':f.target?`${colors[f.color].label} → ${colors[f.target].label} ×`:'珠子错过车斗开口',x,541);ctx.restore();

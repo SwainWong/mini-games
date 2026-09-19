@@ -31,3 +31,8 @@ body{background:radial-gradient(ellipse at top,#e6c591,#8d6243 120%)}.masthead{h
 @media(max-width:799px){.operator-speech{font-size:12px;line-height:1.35;right:25%;top:87.4%;bottom:auto;width:46%;padding:6px 8px}.round-table{font-size:12px}.round-table td,.round-table th{padding:4px 1px}.pause-note{font-size:12px}.codex-art{width:66px;height:52.5px}.codex-content h3{font-size:16px}.brush-options #pause{font-size:12px;min-height:36px;padding:4px 10px}#potential{font-size:9px}.result-card #result-breakdown p{font-size:12px}}
 
 .operator-speech>span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.operator-speech[hidden]{display:none}
+
+/* Keep the next/retry controls visible even with four-color results or a short viewport. */
+.result-card{display:flex;flex-direction:column;overflow:hidden;max-height:95%;padding-bottom:10px}.result-content{overflow:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin}.result-actions{flex-shrink:0;padding-top:6px;background:#fff2d6;border-top:1px solid #e4cea4}.result-actions .primary-button{margin-top:0}.result-card .result-actions button{min-height:44px}.result-actions .text-button{padding:4px 8px;min-height:44px}#result-kicker{display:none}.result-card .result-record{padding:3px;margin:5px 0}.result-card .result-score{margin:3px 0 7px}.result-card .result-symbol{font-size:34px}.result-card .result-stars{margin:0}.result-card h2{margin:5px 0}.result-card #result-description{line-height:1.5}.result-content:focus-visible{outline:2px solid #b58645;outline-offset:-2px}
+
+.result-card .treasure-history{font-size:11px;line-height:1.45;color:#79593d;text-align:left;padding:5px 7px;border-radius:6px;background:#eddcb955}
