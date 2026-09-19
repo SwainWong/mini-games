@@ -1,0 +1,2 @@
+const{test}=require('node:test'),a=require('node:assert/strict'),{World}=require('../core.js'),levels=require('../levels.js');
+test('default shovel has the same 20px radius as the single UI tool',()=>{const x=new World(levels[0],{seed:1}),y=new World(levels[0],{seed:1});x.dig([260,300],[360,350]);y.dig([260,300],[360,350],20);a.deepEqual(x.terrain.grid,y.terrain.grid);a.equal(x.terrain.units,y.terrain.units);});

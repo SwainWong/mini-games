@@ -1,0 +1,6 @@
+# Fixed console and rotating wheel
+
+Built-in image_gen; control-props-v14.png used as material/style reference.
+
+Use case: stylized-concept. Two separate production game sprites on a genuinely transparent RGBA background, exact 2-column 1-row sheet, 1536x1024. Reference is ONLY style/material of brass wooden mining control console; do not include the other props or any character. Left 768x1024 cell: compact upright golden brass and dark wood mining steering pedestal, front view slightly looking down, wide stable base and short top axle mounting boss, NO steering wheel, no handles. Top mounting shaft front face at x384 y250 within cell, base center x384 y900. Same warm polished 2.5D cartoon game finish and lighting as reference. Right 768x1024 cell: ONE isolated round six-spoke brass steering wheel, orthographic FRONT view, perfectly circular, transparent gaps between spokes, central round hub, no pedestal, no shaft, no floor, no shadows. Wheel centered at x384 y512 within right cell, radius300. Both crisp fully opaque metallic objects with clean alpha cutouts. No colored background, glow, motion lines, afterimages, letters, labels, borders, extra objects. These will be separately composited: left pedestal is stationary, right wheel rotates around its own exact center.
+

@@ -1,4 +1,4 @@
-// Verified player-input timing for optional and shortcut bomb routes.
+// Verified input timing for avoid/ignite routes with magic outcomes.
 module.exports={
   "8-avoid-1": {
     "delay": 0,
@@ -18,7 +18,9 @@ module.exports={
   },
   "8-ignite-1": {
     "delay": 0,
-    "ticks": 2
+    "ticks": 1,
+    "score": 120,
+    "stars": 3
   },
   "8-ignite-300": {
     "delay": 0,
@@ -53,8 +55,10 @@ module.exports={
     "ticks": 2
   },
   "11-ignite-300": {
-    "delay": 1,
-    "ticks": 2
+    "delay": 0,
+    "ticks": 1,
+    "score": 150,
+    "stars": 3
   },
   "11-ignite-1000": {
     "delay": 0,
@@ -62,7 +66,9 @@ module.exports={
   },
   "11-ignite-100000": {
     "delay": 0,
-    "ticks": 2
+    "ticks": 1,
+    "score": 150,
+    "stars": 3
   },
   "14-avoid-1": {
     "delay": 0,

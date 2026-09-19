@@ -129,9 +129,26 @@ Use case: stylized-concept, game production sprite asset. Image 1 is style and c
 - `operator-gesture-v15.png`：4×2，左右各4帧抬手、伸手、指车、收手。完整提示词：[operator-gesture-v15-prompt.md](operator-gesture-v15-prompt.md)。
 - 按实际角色边界裁片，固定脚底锚点；单帧只绘制一个 alpha=1 的人物，不使用透明交叉淡化。v14 图集仅保留受惊姿势，v13 图集继续用于逃跑。
 
+## v16 魔法袋与沙流
+
+- `magic-kit-v16.png`：内置 image_gen 生成的 1536×1024 RGBA 图集，3×2 六格依次为紫色问号袋、打开的袋子、闪烁小炸弹、沙流漩涡、灰裂废珠、尘云。
+- 完整提示词：`magic-kit-v16-prompt.md`。保留生成图透明度，不改绘为矢量占位。
+- 废珠仍保留原色小标记；小爆炸复用 `blast-v13.png`，警告范围与逻辑72像素半径一致。
+
 ## v17 操作员独立人物层
 
 - `operator-complete-v17.png`：image_gen 生成的 6×4、24 帧完整母版；保留为素材来源，不在游戏加载。
 - `operator-actor-v17.png`：image_gen 从母版移除控制台和方向盘得到的 RGBA 人物层；游戏使用这一图集。对应两个 `*-prompt.md` 保留完整提示词。
 - 固定控制台继续使用 `control-props-v14.png`，独立绘制。人物按脚底锚点对齐，每次只画一帧；转向经过中间帧，指车包含抬手、伸手、停留、收手、重新握持。
 - 第 11 帧是备用中立帧；运行序列使用其余 23 帧。没有半透明动作混合。
+
+## v16 开发版分离轮盘
+
+- `console-layers-v16.png`：image_gen 生成的1536×1024透明RGBA素材，左列为无轮盘的木铜底座，右列为独立六辐方向盘。提示词见 [console-layers-v16-prompt.md](console-layers-v16-prompt.md)。
+- 底座固定绘制，轮盘单独绕轴转动；使用v17人物层和实测手套握点对齐。受惊时也只切换人物，底座不随人物动作。此分层补充属于完整开发版，和已经发布的v17残影修复区分。
+
+## v16 通用坐下休息动作
+
+- `rival-rest-v16.png`：内置 image_gen 以现有盗宝人身份生成的12张完整姿势；屈膝、深蹲、坐下、擦汗、喝水、收瓶、起身。提示词见 [rival-rest-v16-prompt.md](rival-rest-v16-prompt.md)。不包含钻机、珠子或藏宝袋，兼容尚待选择的三种工具/拾取方案。
+- 实际1254×1254 RGBA，生成排布不是等高格子。`rival-rest.js` 使用实测人物边界、逐帧脚底锚点；坐姿不放大成站立高度，每帧只画一个人物，独立藏宝袋绘制一次。
+- 保留原体力恢复速度与休息时长，末段根据剩余恢复时间切换起身帧；晕眩和逃跑有各自的优先状态。

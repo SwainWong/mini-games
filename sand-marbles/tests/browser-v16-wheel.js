@@ -1,0 +1,7 @@
+async page=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:4208/sand-marbles/?level=15&seed=1',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>sandGame.snapshot().assetsReady);await page.locator('#codex-confirm').click();const samples=[];
+ for(let i=0;i<80;i++){samples.push(await page.evaluate(()=>sandGame.snapshot().visual));await page.waitForTimeout(100);}
+ if(!samples.some(s=>s.wheelAngle>.2)||!samples.some(s=>s.wheelAngle<-.2))throw Error('wheel did not rotate both ways');if(samples.some(s=>s.consolePosition.x!==450||s.consolePosition.y!==673))throw Error('console moved');
+ await page.setViewportSize({width:390,height:900});await page.screenshot({path:'output/playwright/v16-wheel-mobile.png'});await page.setViewportSize({width:1100,height:1000});await page.screenshot({path:'output/playwright/v16-wheel-desktop.png'});
+ await page.locator('#choose-level').click();const paused=await page.evaluate(()=>sandGame.snapshot().visual.wheelAngle);await page.waitForTimeout(300);if(paused!==await page.evaluate(()=>sandGame.snapshot().visual.wheelAngle))throw Error('wheel moved while paused');await page.locator('[data-close="level-dialog"]').click();await page.locator('#restart').click();if(errors.length)throw Error(errors.join(';'));return {min:Math.min(...samples.map(s=>s.wheelAngle)),max:Math.max(...samples.map(s=>s.wheelAngle)),frames:[...new Set(samples.map(s=>s.operatorFrame))],fixedConsole:true,pause:true,errors};
+}
