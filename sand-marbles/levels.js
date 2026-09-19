@@ -1411,15 +1411,22 @@
 ];
   const targets=[40,80,80,80,90,120,70,100,150,130,150,170,160,230,260];
   const durations=[45,45,50,50,50,55,55,60,60,60,65,65,70,70,75];
-  const crew=[0,0,1,1,1,1,1,1,2,2,2,3,2,4,4];
+  const crew=[0,0,0,0,0,0,0,0,0,1,1,3,2,4,4];
   const loot={6:[[225,365,20]],7:[[205,250,20]],8:[[185,460,20],[450,410,20]],9:[[155,475,20],[365,420,20]],10:[[420,295,20]],11:[[275,385,20],[495,415,20]],12:[[260,380,20],[445,300,20]],13:[[270,420,20],[420,255,30]],14:[[210,510,20],[420,420,20]],15:[[220,360,20],[440,350,20],[120,190,30]]};
-  const bombs={8:[[280,240,0]],11:[[415,340,1]],14:[[245,155,0]],15:[[300,165,0],[310,360,1]]};
+  const bombs={11:[[415,340,1]],14:[[245,155,0]],15:[[300,165,0],[310,360,1]]};
   for(const [i,level]of levels.entries()){
     if(level.id===8){Object.assign(level.rocks[0],{x:380,y:320,rx:58,ry:42});Object.assign(level.mechanics.worms[1],{x:455,y:420});}
     level.targetScore=targets[i];level.timeLimit=durations[i];level.mechanics.crewCount=crew[i];
     if(level.mechanics.rival)level.mechanics.rival.speed=i<5?30:i<10?34:38;
     level.treasures=(loot[level.id]||[]).map(([x,y,points])=>({x,y,points,r:16,kind:points===30?'chest':'bag'}));
     level.bombs=(bombs[level.id]||[]).map(([x,y,rock])=>({pad:{x,y},rock,fuseSeconds:1.8}));
+    // One new concept per stage. Major actors get two practice stages between debuts.
+    if(level.id<4)delete level.mechanics.rival;
+    if(level.id<7)delete level.mechanics.worms;
+    if(!crew[i])delete level.mechanics.porter;
+    for(const group of level.groups)group.types=(group.types||['glass']).map(type=>
+      type==='heavy'&&level.id<5||type==='rubber'&&level.id<8||type==='light'&&level.id<14?'glass':type);
+    level.features=level.features.filter(id=>id==='rival'?!!level.mechanics.rival:id==='worm'?!!level.mechanics.worms?.length:id==='porter'?crew[i]>0:true);
     level.note=`同色入车 +10，接错不扣分。${durations[i]} 秒内争取高分，${targets[i]} 分为过关门槛。`;
   }
   return levels;
