@@ -61,11 +61,20 @@
     resolveBead(b,outcome,contact={},jar=null){
       if(!b.active)return;
       if(outcome==='collected'){this.receive(jar||this.jars.find(j=>j.color===b.color&&j.intact),b,Object.keys(contact).length?contact:undefined);return;}
-      b.active=false;b.stolen=outcome==='stolen';this.losses[outcome]++;this.events.push({type:'loss',outcome,x:contact.x??b.x,y:contact.y??b.y,color:b.color});
+      b.active=false;b.outcome=outcome;b.stolen=outcome==='stolen';this.losses[outcome]++;this.events.push({type:'loss',outcome,x:contact.x??b.x,y:contact.y??b.y,color:b.color});
       this.frameFailure={kind:outcome,x:contact.x??b.x,y:contact.y??b.y,r:b.r,material:b.type,color:b.color,...contact,ball:b};
     }
     recoverableBag(){const r=this.rival;if(!r||r.escaped)return[];const active=this.balls.some(b=>b.active),bombChance=(this.bombs.some(b=>b.state==='burning'||b.state==='idle'&&active)||this.magic?.canScare);return r.torn||r.fleeing||bombChance||r.bag.length+this.balls.filter(b=>b.active).length>6?r.bag:[];}
     remainingPotential(){const active=[...this.balls.filter(b=>b.active),...this.droppedBags.flatMap(b=>b.balls)],recoverable=this.recoverableBag();return this.cargo.availablePotential([...active,...recoverable])+(active.length||recoverable.length?this.magic.potential():0);}
+    roundReport(){
+      const collected=new Set(this.jars.flatMap(j=>j.balls)),dropped=new Set(this.droppedBags.flatMap(b=>b.balls));
+      const free=this.balls.filter(b=>b.active&&!b.held),held=this.balls.filter(b=>b.active&&b.held),recoverable=this.recoverableBag();
+      const candidates=[...free,...held,...dropped,...recoverable],value=bs=>bs.reduce((n,b)=>n+(b.value??10),0);
+      const colors=[...new Set(this.balls.map(b=>b.color))].map(color=>{const row={color,total:0,collected:0,stolen:0,wrong:0,missed:0,unsettled:0,points:0};
+        for(const b of this.balls.filter(b=>b.color===color)){row.total++;if(collected.has(b)){row.collected++;row.points+=b.value??10;}else if(b.active||dropped.has(b))row.unsettled++;else if(b.stolen)row.stolen++;else if(b.outcome==='wrong-color')row.wrong++;else if(b.outcome==='missed')row.missed++;else row.unsettled++;}return row;});
+      const beadPoints=colors.reduce((n,c)=>n+c.points,0),beadPotential=this.cargo.availablePotential(candidates),remaining=this.remainingPotential();
+      return{colors,beadPoints,bonusPoints:this.score-beadPoints,remaining,beadPotential,treasurePotential:remaining-beadPotential,rawBeadValue:value(candidates),freeCount:free.length,heldCount:held.length,droppedCount:dropped.size,recoverableCount:recoverable.length,unopenedBags:this.treasures.filter(t=>!t.opened&&t.kind==='bag').length,unopenedChests:this.treasures.filter(t=>!t.opened&&t.kind==='chest').length};
+    }
     queueInteraction(e){this.interactions.push({...e,u:Math.max(0,Math.min(1,e.u??1))});}
     resolveInteractions(){
       const priority={treasure:0,collect:1,damage:2,theft:3,loss:4,trigger:5};

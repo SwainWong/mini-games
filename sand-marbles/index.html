@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#fff3da">
   <title>沙里有珠 · 宝藏争夺战</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='27' fill='%23b86b3e'/%3E%3Ccircle cx='23' cy='22' r='9' fill='%23ffe4b7'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
   <div class="app">
@@ -22,14 +22,14 @@
           <div class="level-info"><span class="level-kicker">LEVEL <b id="level-number">01</b> / 15 <span id="difficulty">入门</span></span><h2 id="level-title">第一条沙径</h2></div>
           <button class="level-picker" id="choose-level" aria-haspopup="dialog">选择关卡 <span>▦</span></button>
         </div>
-        <div class="score-panel"><div><small>TARGET · 门槛</small><b id="target-score">40</b></div><div><small>SCORE · 当前</small><b id="current-score">0</b></div><p class="round-status"><span class="clock-label">剩余 <b id="round-clock" role="timer" aria-label="剩余时间">00:45</b></span><span>最高可得 <b id="remaining-score">60</b></span></p><progress id="score-meter" max="40" value="0"></progress></div>
+        <div class="score-panel"><div><small>TARGET · 门槛</small><b id="target-score">40</b></div><div><small>SCORE · 当前</small><b id="current-score">0</b></div><p class="round-status"><span class="clock-label">剩余 <b id="round-clock" role="timer" aria-label="剩余时间">00:45</b></span><button id="potential" aria-haspopup="dialog">剩余上限 <b id="remaining-score">60</b> ⓘ</button></p><progress id="score-meter" max="40" value="0"></progress></div>
         <div class="level-features" id="features" aria-label="本关机制"></div>
-        <div class="dig-panel"><div><span>已挖沙 <b id="dug-count">0</b></span><span id="star-budget">三星目标 ≤ 0</span></div><meter id="sand-meter" min="0" max="100" value="0" aria-label="本关挖沙用量"></meter><div class="brush-options"><button id="rules" aria-haspopup="dialog">矿场图鉴</button></div></div>
+        <div class="dig-panel"><div><span>已挖沙 <b id="dug-count">0</b></span><span id="star-budget">三星目标 ≤ 0</span></div><meter id="sand-meter" min="0" max="100" value="0" aria-label="本关挖沙用量"></meter><div class="brush-options"><button id="pause" aria-pressed="false">Ⅱ 看图暂停</button><button id="rules" aria-haspopup="dialog">矿场图鉴</button></div></div>
         <div class="board-wrap" id="board-wrap">
           <div id="loading" class="loading"><span class="loading-gem">◆</span><b id="loading-text">正在整理探险装备…</b><button id="reload-assets" hidden>重新加载</button></div><canvas id="game" width="560" height="760" aria-label="按住鼠标或手指划开沙土，让珠子落入同色矿车。">你的浏览器需要支持 Canvas 才能玩这个游戏。</canvas>
-          <div class="board-caption"><span><i></i> <span id="board-instruction">按住并划动，挖出一条路</span></span><span id="collected">0 / 22</span></div>
+          <div id="pause-note" class="pause-note" hidden>已暂停 · 可看图，不能挖沙</div><div id="resume-cue" class="resume-cue" hidden></div><div id="operator-speech" class="operator-speech" aria-hidden="true"></div><div class="board-caption"><span><i></i> <span id="board-instruction">按住并划动，挖出一条路</span></span><span id="collected">0 / 22</span></div>
           <div class="result-overlay" id="result" hidden>
-            <div class="result-card"><div class="result-symbol" id="result-symbol">✦</div><div id="result-stars" class="result-stars" hidden></div><p id="result-score" class="result-score"></p><span class="eyebrow" id="result-kicker">BEAUTIFULLY DONE</span><h2 id="result-title">每颗珠子，都到家了。</h2><p id="result-record" class="result-record"></p><p id="result-description">动作快一点，沙路精一点。</p><button class="primary-button" id="result-action">下一关 <span>→</span></button><button class="text-button" id="result-review" hidden>查看失误位置</button><button class="text-button" id="result-replay">再玩一次</button></div>
+            <div class="result-card"><div class="result-symbol" id="result-symbol">✦</div><div id="result-stars" class="result-stars" hidden></div><p id="result-score" class="result-score"></p><span class="eyebrow" id="result-kicker">BEAUTIFULLY DONE</span><h2 id="result-title">每颗珠子，都到家了。</h2><p id="result-record" class="result-record"></p><p id="result-description">动作快一点，沙路精一点。</p><div id="result-breakdown"></div><button class="primary-button" id="result-action">下一关 <span>→</span></button><button class="text-button" id="result-review" hidden>查看失误位置</button><button class="text-button" id="result-replay">再玩一次</button></div>
           </div>
         </div>
         <div class="game-bottom"><p id="status" role="status" aria-live="polite"><span class="status-dot"></span>不用着急，先想好珠子的路线。</p><div class="game-actions"><button id="return-result" hidden>查看结果</button><button id="restart"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg>重来</button></div></div>
@@ -40,19 +40,20 @@
   </div>
   <dialog id="level-dialog" class="game-dialog"><div class="dialog-heading"><div><span class="eyebrow">YOUR LITTLE ADVENTURE</span><h2>十五段沙径</h2></div><button data-close="level-dialog" aria-label="关闭关卡选择">×</button></div><p>随时选关。星级只在本次打开期间保留，刷新重新开始。</p><p id="session-summary" class="session-summary"></p><div id="level-grid"></div></dialog>
   <dialog id="rules-dialog" class="game-dialog codex-dialog"><div class="dialog-heading"><div><span class="eyebrow">MINER'S FIELD GUIDE</span><h2 id="codex-title">矿场图鉴</h2></div><button id="codex-close" aria-label="关闭图鉴">×</button></div><div id="codex-content" class="codex-content"></div><p id="rules-budget"></p><div class="codex-footer"><button id="codex-confirm" class="primary-button">知道了，开始开采 →</button></div></dialog>
-  <script src="rock-geometry.js?v=20"></script>
-  <script src="hazards.js?v=20"></script>
-  <script src="cart-cargo.js?v=20"></script>
-  <script src="cart-crew.js?v=20"></script>
-  <script src="codex.js?v=20"></script>
-  <script src="rival-rest.js?v=20"></script>
-  <script src="rival-animation.js?v=20"></script>
-  <script src="rival.js?v=20"></script>
-  <script src="magic.js?v=20"></script>
-  <script src="core.js?v=20"></script>
-  <script src="levels.js?v=20"></script>
-  <script src="audio.js?v=20"></script>
-  <script src="operator-animation.js?v=20"></script>
-  <script src="game.js?v=20"></script>
+  <dialog id="potential-dialog" class="game-dialog"><div class="dialog-heading"><h2>剩余得分上限</h2><button data-close="potential-dialog" aria-label="关闭得分明细">×</button></div><div id="potential-content"></div><p>查看时已暂停。上限不是保底，也不保证剩余时间内能够全部拿到。</p></dialog>
+  <script src="rock-geometry.js?v=21"></script>
+  <script src="hazards.js?v=21"></script>
+  <script src="cart-cargo.js?v=21"></script>
+  <script src="cart-crew.js?v=21"></script>
+  <script src="codex.js?v=21"></script>
+  <script src="rival-rest.js?v=21"></script>
+  <script src="rival-animation.js?v=21"></script>
+  <script src="rival.js?v=21"></script>
+  <script src="magic.js?v=21"></script>
+  <script src="core.js?v=21"></script>
+  <script src="levels.js?v=21"></script>
+  <script src="audio.js?v=21"></script>
+  <script src="operator-animation.js?v=21"></script>
+  <script src="game.js?v=21"></script>
 </body>
 </html>

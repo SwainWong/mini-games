@@ -13,6 +13,22 @@
  light:{name:'轻盈珠',icon:'◇',text:'带菱形纹路，落得较慢，容易被岔路和移动的车斗影响。它与其他珠子一样，同色入车 +10 分。'},
  chest:{name:'矿藏宝箱',icon:'▣',text:'珠子撞开宝箱 +30 分。先取宝藏再接珠，一颗珠子可以得到两笔分数；箱子只开一次。'}
  };
+ const short={
+ score:['同色入车通常 +10，灰裂废珠 +3；达标后继续冲分。','时间到或机会用尽才结算，过关后按挖沙量评星。'],
+ rock:['失去支撑会倾斜掉落，落入矿车会占车位。','留意石头下方；也能用它砸晕盗宝人、清除虫子。'],
+ rival:['他会钻土、捧珠装袋；袋子越重，行动越慢。','优先救他附近的珠子，也可趁他坐下休息时开路。'],
+ porter:['亮灯颜色就是正在驾驶的车，矿车会平滑移动。','先挖通路线，出口留一层沙，等同色车到位再放珠。'],
+ heavy:['重力珠更大、更沉，下落更快。','弯道多留一点空间，同色入车仍得10分。'],
+ worm:['虫子自动挖开侧壁，可能把珠子引入岔路。','观察新的缺口；落石和爆炸可以清除虫子。'],
+ bag:['70%金币、15%小炸弹、15%全沙回填。','想稳妥可以绕开；回填后重挖旧路不重复计沙量。'],
+ rubber:['弹力珠碰壁回弹更强，带斜纹。','弯道留出缓冲，同色入车得10分。'],
+ bomb:['珠子碰上游金盘点火，引线烧完炸开挡路石头。','留意范围圈，也可能伤车、吓跑操作员；可以绕开。'],
+ multi:['四车共用单轨，轮流受控；能互推但不能交换顺序。','看亮灯和车上标记，等同色车靠近出口再放珠。'],
+ light:['菱形纹路的轻盈珠下落较慢。','留意岔路和移动车斗，同色入车得10分。'],
+ chest:['撞开宝箱固定 +30分，每箱一次。','珠子开箱后还能进车得分。']
+ };
+ for(const [id,lines] of Object.entries(short))entries[id].short=lines;
+ entries.bag.text='50%得到20分，20%得到40分，15%小炸弹，15%全沙回填。'+entries.bag.text;
  function forLevel(l){const ids=['score'];if(l.rocks.length)ids.push('rock');if(l.mechanics.rival)ids.push('rival');if(l.mechanics.crewCount)ids.push('porter');if(l.mechanics.crewCount>1)ids.push('multi');if(l.mechanics.worms?.length)ids.push('worm');const types=new Set(l.groups.flatMap(g=>g.types||[g.type||'glass']));for(const t of ['heavy','rubber','light'])if(types.has(t))ids.push(t);if(l.treasures?.some(t=>t.kind==='bag'))ids.push('bag');if(l.treasures?.some(t=>t.kind==='chest'))ids.push('chest');if(l.bombs?.length)ids.push('bomb');return ids;}
  return{entries,forLevel};
 });
